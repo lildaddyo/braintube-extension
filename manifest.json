@@ -9,8 +9,7 @@
     "contextMenus",
     "sidePanel",
     "tabs",
-    "scripting",
-    "identity"
+    "scripting"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
