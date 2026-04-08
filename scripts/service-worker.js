@@ -62,7 +62,9 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 function startGoogleAuth() {
   const manifest    = chrome.runtime.getManifest();
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org`;
+  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+
+  console.log('[BrainTube] redirect_uri:', redirectUri);
 
   const url = new URL('https://accounts.google.com/o/oauth2/auth');
   url.searchParams.set('client_id',     manifest.oauth2.client_id);
