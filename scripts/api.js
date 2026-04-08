@@ -5,10 +5,17 @@ import { CONFIG, buildUrl } from './config.js';
 // Checks bt_session (Google OAuth) then session (email/password), both keys
 // are always written together by auth.js and auth-handler.js.
 async function getHeaders() {
-  const stored = await chrome.storage.local.get(['bt_session', 'session']);
-  const session = stored.bt_session || stored.session;
+  const all = await chrome.storage.local.get(null);
+  console.log('[BrainTube] ALL storage keys:', Object.keys(all));
+  console.log('[BrainTube] ALL storage values (truncated):', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(all).map(([k, v]) => [k, typeof v === 'object' ? '[object]' : String(v).substring(0, 30)])
+    )
+  ));
+
+  const session = all['bt_session'] || all['session'];
   const token = session?.access_token;
-  console.log('[BrainTube] api.js getHeaders — source:', stored.bt_session ? 'bt_session' : stored.session ? 'session' : 'NONE', '| token:', token ? token.substring(0, 20) + '...' : 'MISSING');
+  console.log('[BrainTube] getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', token ? token.substring(0, 20) + '...' : 'MISSING');
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
