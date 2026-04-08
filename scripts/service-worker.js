@@ -38,6 +38,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.action.openPopup();
   }
 
+  // Open side panel — must be called from service worker with active tabId
+  // (popup may close before chrome.sidePanel.open resolves if called directly)
+  if (message.type === 'OPEN_SIDEPANEL') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
+      }
+    });
+  }
+
   // AI conversation capture — sent from popup when on claude.ai or chatgpt.com
   if (message.type === 'SAVE_AI_CONVERSATION') {
     saveAiConversation(message.tabId, message.platform)

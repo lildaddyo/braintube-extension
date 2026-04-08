@@ -53,10 +53,16 @@ export async function getHeaders() {
   const stored = await chrome.storage.local.get(['bt_session', 'session']);
   const session = stored.bt_session || stored.session;
   const accessToken = session?.access_token;
-  
+  console.log('[BrainTube] getHeaders — session source:', stored.bt_session ? 'bt_session' : stored.session ? 'session' : 'NONE', '| token present:', !!accessToken);
   return {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
     'apikey': CONFIG.SUPABASE_ANON_KEY
   };
+}
+
+// Helper to get the current session — checks bt_session then session
+export async function getSession() {
+  const stored = await chrome.storage.local.get(['bt_session', 'session']);
+  return stored.bt_session || stored.session || null;
 }

@@ -2,7 +2,7 @@
 import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
 import { processYouTube, getItem, trackEvent } from './api.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
-import { CONFIG } from './config.js';
+import { CONFIG, getSession as getStorageSession } from './config.js';
 
 const GOOGLE_BTN_INNER = `
   <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -219,7 +219,14 @@ async function handleSignIn() {
 // Handle save video
 async function handleSaveVideo() {
   if (!currentVideo) return;
-  
+
+  // Pre-flight session check — surface 401 cause immediately
+  const session = await getStorageSession();
+  if (!session?.access_token) {
+    showToast('Not signed in — please sign in first', true);
+    return;
+  }
+
   saveVideoBtn.disabled = true;
   saveVideoBtn.textContent = '💾 Saving...';
   
@@ -269,17 +276,11 @@ signoutBtn.addEventListener('click', async () => {
 saveVideoBtn.addEventListener('click', handleSaveVideo);
 
 viewNoteBtn.addEventListener('click', () => {
-  if (currentVideo?.item) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.sidePanel.open({ tabId: tabs[0].id });
-    });
-  }
+  chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
 });
 
 aiChatBtn.addEventListener('click', () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.sidePanel.open({ tabId: tabs[0].id });
-  });
+  chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
 });
 
 openLibraryBtn.addEventListener('click', () => {
