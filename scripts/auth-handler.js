@@ -28,7 +28,8 @@ async function runGoogleAuth() {
   url.searchParams.set('response_type', 'token id_token');
 url.searchParams.set('redirect_uri',  redirectUri);
   url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
-  url.searchParams.set('nonce',         Math.random().toString(36).substring(2));
+  const nonce = Math.random().toString(36).substring(2);
+  url.searchParams.set('nonce', nonce);
 
   setStatus('Waiting for Google sign-in…');
 
@@ -73,7 +74,7 @@ url.searchParams.set('redirect_uri',  redirectUri);
               'Content-Type': 'application/json',
               'apikey':       SUPABASE_ANON,
             },
-            body: JSON.stringify({ provider: 'google', token: idToken }),
+            body: JSON.stringify({ provider: 'google', token: idToken, nonce }),
           }
         );
 
