@@ -32,10 +32,11 @@ export async function signIn(email, password) {
   }
 }
 
-// Save session to storage
+// Save session to storage — writes both keys so getHeaders() always finds the token
+// regardless of auth method (email/password or Google OAuth)
 export async function saveSession(session) {
-  await chrome.storage.local.set({ session });
-  console.log('💾 Session saved');
+  await chrome.storage.local.set({ session, bt_session: session });
+  console.log('💾 Session saved (both keys)');
 }
 
 // Get current session — checks bt_session (Google OAuth) then session (email/password)

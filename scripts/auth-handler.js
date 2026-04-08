@@ -104,7 +104,8 @@ url.searchParams.set('redirect_uri',  redirectUri);
           user:          data.user,
         };
 
-        await chrome.storage.local.set({ bt_session: session });
+        // Write both keys so getHeaders() in config.js always finds the token
+        await chrome.storage.local.set({ bt_session: session, session: session });
         console.log('✅ Signed in:', data.user?.email);
 
         setStatus(`Signed in as ${data.user?.email}. Closing…`);
