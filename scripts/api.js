@@ -88,24 +88,26 @@ export async function quickSearch(query, userId) {
 }
 
 // AI chat about a video
-export async function chat(message, itemId) {
+// messages: [{ role: 'user'|'assistant', content: string }]
+// video_id: the item UUID (Supabase items.id)
+export async function chat(messages, videoId) {
   const response = await fetch(
     buildUrl(CONFIG.ENDPOINTS.CHAT),
     {
       method: 'POST',
       headers: await getHeaders(),
-      body: JSON.stringify({ message, itemId })
+      body: JSON.stringify({ messages, video_id: videoId })
     }
   );
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Chat API error:', response.status, errorText);
     throw new Error(`Chat failed: ${response.status}`);
   }
-  
+
   const data = await response.json();
-  return data.reply || data.response || data.message;
+  return data.reply || data.response || data.message || data.content;
 }
 
 // Check subscription status

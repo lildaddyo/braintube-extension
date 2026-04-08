@@ -178,12 +178,14 @@ async function loadHighlights() {
   highlightsContent.innerHTML = html;
 }
 
+// Conversation history for multi-turn context
+let conversationHistory = [];
+
 // Initialize chat
 function initChat() {
-  // Add welcome message
+  conversationHistory = [];
   addMessage('assistant', '👋 Hi! Ask me anything about this video!');
-  
-  // Check if video is indexed
+
   if (currentItem.status !== CONFIG.STATUS.INDEXED) {
     addMessage('assistant', '⚠️ Note: This video is still processing. Chat will work once it\'s indexed.');
   }
@@ -193,36 +195,37 @@ function initChat() {
 async function sendChat() {
   const message = chatInput.value.trim();
   if (!message) return;
-  
-  // Check status
+
   if (currentItem.status !== CONFIG.STATUS.INDEXED) {
     addMessage('assistant', '⏳ This video is still processing. Please wait until it\'s indexed before chatting.');
     return;
   }
-  
-  // Add user message
+
+  // Append user turn to history and UI
+  conversationHistory.push({ role: 'user', content: message });
   addMessage('user', message);
   chatInput.value = '';
-  
-  // Add loading message
+
   const loadingId = 'msg-' + Date.now();
   addMessage('assistant', '💭 Thinking...', loadingId);
-  
   chatSend.disabled = true;
-  
+
   try {
-    const reply = await chat(message, currentItem.id);
-    
-    // Remove loading message
+    // Send full history so the edge function has multi-turn context
+    const reply = await chat(conversationHistory, currentItem.id);
+
     document.getElementById(loadingId)?.remove();
-    
-    // Add AI response
     addMessage('assistant', reply);
-    
+
+    // Append assistant turn so next send includes it
+    conversationHistory.push({ role: 'assistant', content: reply });
+
     await trackEvent('extension_chat_message', { item_id: currentItem.id });
   } catch (error) {
     document.getElementById(loadingId)?.remove();
     addMessage('assistant', '❌ Failed to get response: ' + error.message);
+    // Remove the failed user turn from history so it can be retried
+    conversationHistory.pop();
   } finally {
     chatSend.disabled = false;
   }
