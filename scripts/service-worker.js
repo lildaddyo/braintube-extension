@@ -110,7 +110,9 @@ function startGoogleAuth() {
           }
         );
 
+        console.log('[BrainTube] Supabase response status:', res.status);
         const data = await res.json();
+        console.log('[BrainTube] Supabase session response:', JSON.stringify(data));
 
         if (!res.ok || !data.access_token) {
           throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
