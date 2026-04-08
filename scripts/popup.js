@@ -278,14 +278,16 @@ saveVideoBtn.addEventListener('click', handleSaveVideo);
 viewNoteBtn.addEventListener('click', () => {
   if (currentVideo?.item) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id });
+      console.log('[BrainTube] viewNoteBtn tabId:', tabs[0]?.id);
+      if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
     });
   }
 });
 
 aiChatBtn.addEventListener('click', () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id });
+    console.log('[BrainTube] aiChatBtn tabId:', tabs[0]?.id);
+    if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
   });
 });
 
