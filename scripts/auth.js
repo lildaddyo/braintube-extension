@@ -86,12 +86,14 @@ const GOOGLE_SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
 const GOOGLE_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4MzE3NjgsImV4cCI6MjAyNTQwNzc2OH0.JiMKbCPMvxdQN36DFuXBRjYKuC0TqFsEqRWCbVsNODs';
 
 export async function signInWithGoogle() {
-  const redirectUrl = chrome.identity.getRedirectURL();
+  // Use /auth suffix so Supabase can route the callback back to this exact URL
+  const redirectUrl = chrome.identity.getRedirectURL('auth');
 
   const authUrl =
     `${GOOGLE_SUPABASE_URL}/auth/v1/authorize` +
     `?provider=google` +
-    `&redirect_to=${encodeURIComponent(redirectUrl)}`;
+    `&redirect_to=${encodeURIComponent(redirectUrl)}` +
+    `&skip_http_redirect=true`;
 
   let responseUrl;
   try {
@@ -105,15 +107,29 @@ export async function signInWithGoogle() {
 
   if (!responseUrl) throw new Error('No response from Google sign-in.');
 
-  // Supabase returns tokens in the URL fragment
-  const url    = new URL(responseUrl);
-  const params = new URLSearchParams(url.hash ? url.hash.slice(1) : url.search.slice(1));
+  // Debug: log exactly what Supabase returned so we can inspect the shape
+  console.log('[BrainTube] Google OAuth responseUrl:', responseUrl);
 
-  const accessToken  = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
-  const expiresIn    = params.get('expires_in');
+  const url = new URL(responseUrl);
 
-  if (!accessToken) throw new Error('Google sign-in did not return an access token.');
+  // Supabase may return tokens in the hash fragment OR query params — check both
+  const hashParams  = new URLSearchParams(url.hash  ? url.hash.slice(1)  : '');
+  const queryParams = new URLSearchParams(url.search ? url.search.slice(1) : '');
+
+  const accessToken  = hashParams.get('access_token')  || queryParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+  const expiresIn    = hashParams.get('expires_in')    || queryParams.get('expires_in');
+
+  // Fallback: some Supabase versions embed the session in error_description
+  if (!accessToken) {
+    const errDesc = hashParams.get('error_description') || queryParams.get('error_description');
+    console.error('[BrainTube] No access_token found. error_description:', errDesc);
+    throw new Error(
+      errDesc
+        ? `Google sign-in failed: ${errDesc}`
+        : 'Google sign-in did not return an access token. Check console for responseUrl.'
+    );
+  }
 
   // Fetch user record from Supabase
   const userResp = await fetch(`${GOOGLE_SUPABASE_URL}/auth/v1/user`, {
