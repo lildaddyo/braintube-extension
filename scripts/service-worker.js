@@ -4,9 +4,6 @@ import { CONFIG } from './config.js';
 
 console.log('🧠 BrainTube service worker started');
 
-// Open side panel automatically when the extension action icon is clicked
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
-
 // Installation
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Extension installed:', details.reason);
