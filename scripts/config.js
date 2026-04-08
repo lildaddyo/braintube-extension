@@ -50,10 +50,11 @@ export function buildUrl(endpoint) {
 
 // Helper to get auth headers — checks bt_session (Google OAuth) then session (email/password)
 export async function getHeaders() {
-  const stored = await chrome.storage.local.get(['bt_session', 'session']);
-  const session = stored.bt_session || stored.session;
+  const all = await chrome.storage.local.get(null);
+  console.log('[BrainTube] config.getHeaders — ALL storage keys:', Object.keys(all));
+  const session = all['bt_session'] || all['session'];
   const accessToken = session?.access_token;
-  console.log('[BrainTube] getHeaders — session source:', stored.bt_session ? 'bt_session' : stored.session ? 'session' : 'NONE', '| token present:', !!accessToken);
+  console.log('[BrainTube] config.getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', accessToken ? accessToken.substring(0, 20) + '...' : 'MISSING');
   return {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',

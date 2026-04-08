@@ -276,15 +276,21 @@ signoutBtn.addEventListener('click', async () => {
 saveVideoBtn.addEventListener('click', handleSaveVideo);
 
 viewNoteBtn.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
+  if (currentVideo?.item) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id });
+    });
+  }
 });
 
 aiChatBtn.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id });
+  });
 });
 
 openLibraryBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: CONFIG.WEB_APP_URL });
+  chrome.tabs.create({ url: `${CONFIG.WEB_APP_URL}/library` });
 });
 
 searchInput.addEventListener('keypress', (e) => {
