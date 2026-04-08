@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
+  <!-- Toast notification -->
+  <div id="toast" style="display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;max-width:260px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);"></div>
+
   <div class="container">
     <!-- Header -->
     <div class="header">
@@ -24,6 +27,7 @@
       <h2>Sign in to BrainTube</h2>
       <input type="email" id="email" placeholder="Email" />
       <input type="password" id="password" placeholder="Password" />
+      <div id="auth-error" style="display:none;color:#fca5a5;font-size:12px;margin:-4px 0 4px;text-align:center;"></div>
       <button class="btn-primary" id="signin-btn">Sign In</button>
       <div class="divider">or</div>
       <button class="btn-google" id="google-signin-btn">

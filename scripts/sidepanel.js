@@ -118,9 +118,9 @@ async function loadSummary() {
         await generateSummary(currentItem.id);
         generateBtn.textContent = '✅ Started! Refresh in a minute';
       } catch (error) {
-        alert('Failed to generate summary');
+        console.error('Failed to generate summary:', error);
         generateBtn.disabled = false;
-        generateBtn.textContent = '🤖 Generate AI Summary';
+        generateBtn.textContent = '❌ Failed — try again';
       }
     });
   }
@@ -196,7 +196,7 @@ async function sendChat() {
   
   // Check status
   if (currentItem.status !== CONFIG.STATUS.INDEXED) {
-    alert('This video is still processing. Please wait until it\'s indexed.');
+    addMessage('assistant', '⏳ This video is still processing. Please wait until it\'s indexed before chatting.');
     return;
   }
   

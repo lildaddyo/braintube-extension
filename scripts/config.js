@@ -50,8 +50,9 @@ export function buildUrl(endpoint) {
 
 // Helper to get auth headers — checks bt_session (Google OAuth) then session (email/password)
 export async function getHeaders() {
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  const accessToken = (stored.bt_session || stored.session)?.access_token;
+  const stored = await chrome.storage.local.get(['bt_session', 'session']);
+  const session = stored.bt_session || stored.session;
+  const accessToken = session?.access_token;
   
   return {
     'Authorization': `Bearer ${accessToken}`,

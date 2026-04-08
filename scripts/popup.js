@@ -42,6 +42,23 @@ const openLibraryBtn = document.getElementById('open-library-btn');
 
 let currentVideo = null;
 
+// ── Toast / error helpers ──────────────────────────────────────────────────────
+const toastEl     = document.getElementById('toast');
+const authErrorEl = document.getElementById('auth-error');
+
+function showToast(msg, isError = false, duration = 3000) {
+  toastEl.textContent = msg;
+  toastEl.style.background = isError ? '#7f1d1d' : '#1e293b';
+  toastEl.style.display = 'block';
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => { toastEl.style.display = 'none'; }, duration);
+}
+
+function showAuthError(msg) {
+  authErrorEl.textContent = msg;
+  authErrorEl.style.display = msg ? 'block' : 'none';
+}
+
 // Initialize
 async function init() {
   try {
@@ -180,19 +197,20 @@ async function handleSignIn() {
   const password = passwordInput.value.trim();
   
   if (!email || !password) {
-    alert('Please enter email and password');
+    showAuthError('Please enter email and password');
     return;
   }
-  
+  showAuthError('');
+
   signinBtn.disabled = true;
   signinBtn.textContent = 'Signing in...';
-  
+
   try {
     const session = await signIn(email, password);
     await showMainSection(session);
     await loadCurrentVideo();
   } catch (error) {
-    alert(error.message || 'Sign in failed');
+    showAuthError(error.message || 'Sign in failed');
     signinBtn.disabled = false;
     signinBtn.textContent = 'Sign In';
   }
@@ -211,11 +229,12 @@ async function handleSaveVideo() {
       video_id: currentVideo.videoId,
       source: 'chrome_extension'
     });
-    
-    alert('Video saved! Processing started.');
+
+    saveVideoBtn.textContent = '✅ Saved!';
+    showToast('Video saved! Processing started.');
     await loadCurrentVideo();
   } catch (error) {
-    alert(error.message || 'Failed to save video');
+    showToast(error.message || 'Failed to save video', true);
     saveVideoBtn.disabled = false;
     saveVideoBtn.textContent = '💾 Save This Video';
   }
