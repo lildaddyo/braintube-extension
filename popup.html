@@ -4,83 +4,83 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BrainTube</title>
-  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
-  <div class="header">
-    <img src="icons/braintube-logo.png" alt="BrainTube" class="logo">
-    <div class="header-text">
-      <span class="brand">BrainTube</span>
-      <span class="site-badge" id="siteBadge"></span>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🧠 BrainTube</h1>
     </div>
-    <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
-  </div>
-
-  <div id="stateNotSupported" class="state hidden">
-    <div class="state-icon">🔒</div>
-    <p class="state-title">Not available here</p>
-    <p class="state-sub">Open a conversation on claude.ai or chatgpt.com</p>
-  </div>
-
-  <div id="stateDisabled" class="state hidden">
-    <div class="state-icon">⏸</div>
-    <p class="state-title">Capture disabled for this site</p>
-    <p class="state-sub">Enable it in <a href="#" id="enableLink">settings</a></p>
-  </div>
-
-  <div id="stateNotLoggedIn" class="state hidden">
-    <div class="state-icon">🔒</div>
-    <p class="state-title">Not logged in</p>
-    <p class="state-sub">Please <a href="https://brain-tube.com" target="_blank" id="loginLink">log in to brain-tube.com</a> first, then try again</p>
-  </div>
-
-  <div id="stateReady" class="state hidden">
-    <div class="conversation-info">
-      <div class="info-row">
-        <span class="info-label">Messages</span>
-        <span class="info-value" id="messageCount">—</span>
+    
+    <!-- Loading -->
+    <div id="loading" class="section">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+    
+    <!-- Auth Section -->
+    <div id="auth" class="section" style="display: none;">
+      <h2>Sign in to BrainTube</h2>
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button class="btn-primary" id="signin-btn">Sign In</button>
+      <div class="divider">or</div>
+      <button class="btn-secondary" id="web-signin-btn">Sign in on Website</button>
+    </div>
+    
+    <!-- Main Section -->
+    <div id="main" class="section" style="display: none;">
+      <!-- Search Bar -->
+      <input 
+        type="text" 
+        id="search" 
+        class="search-input" 
+        placeholder="Search your library..."
+      />
+      
+      <!-- Current Video -->
+      <div id="current-video" class="card" style="display: none;">
+        <div class="card-header">Current Video</div>
+        <div class="video-info">
+          <div class="video-title" id="video-title"></div>
+          <div class="video-status" id="video-status"></div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-primary btn-sm" id="view-note-btn">View Note</button>
+          <button class="btn-secondary btn-sm" id="ai-chat-btn">AI Chat</button>
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-label">Capture</span>
-        <span class="info-value capture-active">● Active</span>
+      
+      <!-- AI Conversation Capture (shown on claude.ai / chatgpt.com) -->
+      <div id="ai-capture" style="display: none;">
+        <div class="card" id="ai-capture-card">
+          <div class="card-header" id="ai-platform-label">AI Conversation</div>
+          <div id="ai-save-status" style="font-size:12px; margin: 6px 0; opacity: 0.8;"></div>
+          <div class="card-actions">
+            <button class="btn-primary btn-sm" id="save-conversation-btn">💾 Save Conversation</button>
+          </div>
+        </div>
       </div>
-      <div class="info-row" id="lastSavedRow" style="display:none">
-        <span class="info-label">Last saved</span>
-        <span class="info-value" id="lastSaved">—</span>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="btn-action" id="save-video-btn" style="display: none;">
+          💾 Save This Video
+        </button>
+        <button class="btn-action" id="open-library-btn">
+          📚 Open Library
+        </button>
+      </div>
+      
+      <!-- User Info -->
+      <div class="user-info">
+        <span id="user-email"></span>
+        <button class="btn-link" id="signout-btn">Sign Out</button>
       </div>
     </div>
-
-    <div id="autoSaveBadge" class="auto-save-badge hidden">
-      <span>⚡ Auto-save on</span>
-    </div>
-
-    <button class="save-btn" id="saveBtn">
-      <span id="saveBtnText">Save to BrainTube</span>
-    </button>
-
-    <p class="privacy-note">Only the summary is saved — never raw text</p>
   </div>
-
-  <div id="stateLoading" class="state hidden">
-    <div class="spinner"></div>
-    <p class="state-title" id="loadingMsg">Summarising…</p>
-    <p class="state-sub">Summarising on BrainTube server…</p>
-  </div>
-
-  <div id="stateSuccess" class="state hidden">
-    <div class="state-icon success-icon">✓</div>
-    <p class="state-title">Saved!</p>
-    <p class="state-sub" id="savedTitle"></p>
-    <button class="secondary-btn" id="saveAnotherBtn">Save another</button>
-  </div>
-
-  <div id="stateError" class="state hidden">
-    <div class="state-icon error-icon">✕</div>
-    <p class="state-title">Save failed</p>
-    <p class="state-sub error-msg" id="errorMsg"></p>
-    <button class="secondary-btn" id="retryBtn">Retry</button>
-  </div>
-
-  <script src="popup.js"></script>
+  
+  <script src="scripts/popup.js" type="module"></script>
 </body>
 </html>

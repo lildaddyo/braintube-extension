@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate BrainTube Icons</title></head>
+<body style="font-family: Arial; text-align: center; padding: 50px;">
+  <h1>Generate Icons</h1>
+  <p>Click to download all icons:</p>
+  <button onclick="generateIcons()" style="padding: 15px 30px; font-size: 16px; cursor: pointer;">Download All Icons</button>
+  <div id="previews" style="margin-top: 30px;"></div>
+  
+  <script>
+    function generateIcons() {
+      const sizes = [16, 32, 48, 128];
+      const previews = document.getElementById('previews');
+      
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${size * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧠', size / 2, size / 2);
+        
+        const link = document.createElement('a');
+        link.download = `icon-${size}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        
+        const preview = document.createElement('div');
+        preview.style.display = 'inline-block';
+        preview.style.margin = '10px';
+        preview.innerHTML = `<div>${size}x${size}</div>`;
+        preview.appendChild(canvas.cloneNode(true));
+        previews.appendChild(preview);
+      });
+      
+      alert('Icons downloaded! Move them to the icons/ folder');
+    }
+  </script>
+</body>
+</html>

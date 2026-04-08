@@ -1,0 +1,15 @@
+.braintube-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: transform 0.2s;
+}
+
+.braintube-btn:hover {
+  transform: translateY(-2px);
+}

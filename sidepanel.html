@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrainTube Side Panel</title>
+  <link rel="stylesheet" href="styles/sidepanel.css">
+</head>
+<body>
+  <div class="header">
+    <h1>🧠 BrainTube</h1>
+    <p id="video-title">Loading...</p>
+  </div>
+  
+  <div class="tabs">
+    <button class="tab active" data-tab="chat">💬 Chat</button>
+    <button class="tab" data-tab="summary">📝 Summary</button>
+    <button class="tab" data-tab="transcript">📄 Transcript</button>
+    <button class="tab" data-tab="highlights">✨ Highlights</button>
+  </div>
+  
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+  
+  <div id="empty" class="empty" style="display: none;">
+    <p>Video not in library</p>
+    <p class="empty-hint">Save this video to unlock AI features</p>
+  </div>
+  
+  <!-- Chat Tab -->
+  <div id="tab-chat" class="tab-content active">
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-container">
+      <textarea id="chat-input" placeholder="Ask about this video..." rows="2"></textarea>
+      <button id="chat-send" class="btn-send">Send</button>
+    </div>
+  </div>
+  
+  <!-- Summary Tab -->
+  <div id="tab-summary" class="tab-content">
+    <div id="summary-content"></div>
+  </div>
+  
+  <!-- Transcript Tab -->
+  <div id="tab-transcript" class="tab-content">
+    <div id="transcript-content"></div>
+  </div>
+  
+  <!-- Highlights Tab -->
+  <div id="tab-highlights" class="tab-content">
+    <div id="highlights-content"></div>
+  </div>
+  
+  <script src="scripts/sidepanel.js" type="module"></script>
+</body>
+</html>

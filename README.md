@@ -1,71 +1,196 @@
-# BrainTube – AI Conversation Capture
+# 🧠 BrainTube Chrome Extension - Clean Build
 
-Chrome extension that automatically saves summaries of your [Claude](https://claude.ai) and [ChatGPT](https://chatgpt.com) conversations to your [BrainTube](https://brain-tube.com) knowledge base.
+**Built from official specification** - Production-ready Chrome extension for BrainTube.
 
-## How it works
+## ✨ What's Included
 
-1. You have a conversation on claude.ai or chatgpt.com
-2. Click the BrainTube icon (or let auto-save handle it)
-3. The extension sends the raw conversation text to the BrainTube server
-4. The server summarises it using Claude and stores the digest in your knowledge base
+### Core Features
+- ✅ **Save YouTube videos** to BrainTube library
+- ✅ **AI Chat** - Chat with AI about video content
+- ✅ **View Summaries** - AI-generated summaries and key takeaways
+- ✅ **Read Transcripts** - Full transcript with clickable timestamps
+- ✅ **Highlights** - View and manage your saved highlights
+- ✅ **Quick Search** - Search your library from anywhere
+- ✅ **Direct Authentication** - Sign in with email/password
 
-Raw conversation text never leaves your browser stored anywhere — only the summary is saved.
+### Architecture
+- Clean modular code structure
+- ES6 modules throughout
+- Manifest V3 compliant
+- Based on official BrainTube API specification
 
-## Zero configuration
+## 📦 Installation
 
-**Just log into [brain-tube.com](https://brain-tube.com) and you're done.** No API keys, no setup, nothing to configure.
+### Step 1: Download & Extract
+1. Download `BrainTube-Extension-CLEAN.zip`
+2. Extract to a folder on your computer
+3. You'll see `braintube-extension-v2` folder
 
-Summarisation runs server-side, so the extension itself requires no credentials.
+### Step 2: Generate Icons
+1. Open `create-icons.html` in your browser
+2. Click "Download All Icons"
+3. Create `icons` folder in the extension directory
+4. Move all 4 downloaded PNG files into `icons` folder
 
-## Features
+### Step 3: Load in Chrome
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable "Developer mode" (toggle in top-right)
+3. Click "Load unpacked"
+4. Select the `braintube-extension-v2` folder
+5. Done! Extension is now loaded
 
-- **Manual save** — click the BrainTube toolbar icon on any conversation and hit "Save to BrainTube"
-- **Auto-save on tab close** — optionally save automatically when you close a conversation tab
-- **Inactivity auto-save** — optionally save after 10 minutes of inactivity on a conversation
-- **Per-site toggles** — disable capture entirely for claude.ai or chatgpt.com independently
-- **Session-aware auth** — reads your brain-tube.com login session automatically; shows a prompt if you're not logged in
-- **Orange BT indicator** — small dot in the corner of supported pages shows capture is active
+## 🚀 How to Use
 
-## Installation (developer mode)
+### First Time Setup
+1. Click the BrainTube extension icon in your toolbar
+2. Enter your BrainTube email and password
+3. Click "Sign In"
 
-1. Clone or download this repo
-2. Open Chrome → `chrome://extensions`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** and select this folder
-5. Log into [brain-tube.com](https://brain-tube.com)
-6. Open a conversation on claude.ai or chatgpt.com — the BT dot will appear
+### Saving Videos
+1. Go to any YouTube video
+2. Click the BrainTube extension icon
+3. Click "💾 Save This Video"
+4. Wait for processing to complete
 
-## Settings
+### Using AI Chat
+1. While on a YouTube video, click the extension icon
+2. Click "AI Chat" or "View Note"
+3. This opens the side panel
+4. Switch to "Chat" tab
+5. Ask questions about the video!
 
-Open the extension settings (⚙ in the popup) to:
+### Viewing Transcripts
+1. Open the side panel (click "View Note")
+2. Go to "Transcript" tab
+3. Click any timestamp to jump to that moment in the video
 
-- Toggle **auto-save** on/off
-- Enable/disable capture per site (claude.ai and chatgpt.com independently)
-
-## File structure
+## 📁 File Structure
 
 ```
-braintube-extension/
-├── manifest.json          # MV3 extension manifest
-├── background.js          # Service worker — auth, save flow, alarms
-├── popup.html / .js / .css   # Toolbar popup UI
-├── settings.html / .js / .css  # Options page
-├── content/
-│   ├── claude.js          # Content script for claude.ai
-│   ├── chatgpt.js         # Content script for chatgpt.com
-│   └── brain-tube.js      # Content script for brain-tube.com (reads auth token)
-└── icons/
-    └── braintube-logo.png
+braintube-extension-v2/
+├── manifest.json              # Extension configuration
+├── popup.html                 # Popup UI
+├── sidepanel.html            # Side panel UI
+├── create-icons.html         # Icon generator tool
+├── scripts/
+│   ├── config.js             # API configuration
+│   ├── auth.js               # Authentication module
+│   ├── api.js                # API calls
+│   ├── youtube.js            # YouTube utilities
+│   ├── popup.js              # Popup logic
+│   ├── sidepanel.js          # Side panel logic
+│   ├── content-script.js     # YouTube page integration
+│   └── service-worker.js     # Background tasks
+└── styles/
+    ├── popup.css             # Popup styles
+    ├── sidepanel.css         # Side panel styles
+    └── content-styles.css    # YouTube page styles
 ```
 
-## Tech
+## 🔧 Key Features Explained
 
-- Chrome Extension Manifest V3
-- Service worker for background processing
-- Supabase JWT auth (read from brain-tube.com localStorage — no manual token pasting)
-- Conversation text sent to `braintube-mcp-production.up.railway.app/api/extension-ingest`
+### 1. Authentication
+- Direct sign-in with email/password
+- Session stored securely in Chrome storage
+- Auto-validates on startup
 
-## Related
+### 2. Video Detection
+- Automatically detects when you're on a YouTube video
+- Shows video status (saved/not saved)
+- Quick save button when video isn't in library
 
-- [braintube-mcp](https://github.com/lildaddyo/braintube-mcp) — the MCP server that powers summarisation and storage
-- [brain-tube.com](https://brain-tube.com) — the BrainTube web app
+### 3. Side Panel (Main Feature!)
+Four powerful tabs:
+
+**💬 Chat Tab**
+- AI chatbot grounded in video content
+- Only works on indexed videos
+- Real-time conversation
+
+**📝 Summary Tab**
+- View AI-generated summary
+- See key takeaways
+- Generate summary button for unprocessed videos
+- Status indicator
+
+**📄 Transcript Tab**
+- Full scrollable transcript
+- Timestamps for each segment
+- Click to jump to that moment
+- Clean, readable format
+
+**✨ Highlights Tab**
+- View all your saved highlights
+- Organized by creation date
+
+### 4. Content Script
+- Adds "Save" button to YouTube (optional)
+- Enables timestamp jumping from side panel
+- Lightweight and non-intrusive
+
+## 🐛 Troubleshooting
+
+### Chat Not Working?
+**Check video status first!**
+1. Open side panel
+2. Go to Summary tab
+3. Look at status badge
+4. If NOT "🟢 Ready", click "Generate AI Summary"
+5. Wait for processing
+6. Chat will work once indexed
+
+### Session Expired?
+1. Click extension icon
+2. Sign out
+3. Sign in again
+4. All features will work
+
+### Icons Missing?
+1. Open `create-icons.html`
+2. Download icons
+3. Put in `icons/` folder
+4. Reload extension
+
+### Video Won't Save?
+- Check you're signed in
+- Check your subscription tier (Free = 5 videos max)
+- Check internet connection
+
+## 📋 What's Different From Old Version?
+
+### ✅ Improvements
+- Clean code structure with modules
+- Proper error handling throughout
+- Console logging for debugging
+- Status checks before chat
+- Better UI/UX in side panel
+- Follows official API spec exactly
+
+### 🗑️ Removed
+- Complex session refresh logic (simplified)
+- Unnecessary dependencies
+- Redundant code
+
+## 🔑 Environment
+
+- **API Base**: https://pmwuwzoqnhqqqseddzes.supabase.co
+- **Web App**: https://brain-tube.com
+- **Manifest**: V3
+
+## 💡 Pro Tips
+
+1. **Always check video status** before using chat
+2. **Generate summaries** for better chat responses
+3. **Use transcript** to navigate long videos quickly
+4. **Save interesting videos** even if you don't watch them all
+
+## 📝 Notes
+
+- Chat requires videos to be indexed (processed)
+- Free tier: 5 videos max
+- Timestamps are clickable in transcript
+- Extension works on youtube.com/watch pages only
+
+---
+
+**Built with ❤️ following the official BrainTube API specification**

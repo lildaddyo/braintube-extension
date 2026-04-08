@@ -1,69 +1,63 @@
 {
   "manifest_version": 3,
-  "name": "BrainTube – AI Conversation Capture",
+  "name": "BrainTube - YouTube Knowledge Base",
   "version": "1.0.0",
-  "description": "Save summaries of your Claude and ChatGPT conversations to your BrainTube knowledge base.",
-
-  "icons": {
-    "16":  "icons/braintube-logo.png",
-    "32":  "icons/braintube-logo (2).png",
-    "48":  "icons/braintube-logo (3).png",
-    "128": "icons/braintube-logo (4).png"
+  "description": "Save YouTube videos, get AI summaries, and search your knowledge base.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "sidePanel",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://pmwuwzoqnhqqqseddzes.supabase.co/*",
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://braintube-mcp-production.up.railway.app/*"
+  ],
+  "background": {
+    "service_worker": "scripts/service-worker.js",
+    "type": "module"
   },
-
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16":  "icons/braintube-logo.png",
-      "32":  "icons/braintube-logo (2).png",
-      "48":  "icons/braintube-logo (3).png",
-      "128": "icons/braintube-logo (4).png"
-    },
-    "default_title": "BrainTube"
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
-
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*"],
-      "js": ["content/claude.js"],
+      "matches": ["*://www.youtube.com/watch*"],
+      "js": ["scripts/content-script.js"],
+      "css": ["styles/content-styles.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chatgpt.com/*"],
-      "js": ["content/chatgpt.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://brain-tube.com/*", "https://www.brain-tube.com/*"],
-      "js": ["content/brain-tube.js"],
+      "matches": ["https://claude.ai/*", "https://chatgpt.com/*"],
+      "js": ["scripts/ai-capture.js"],
       "run_at": "document_idle"
     }
   ],
-
-  "permissions": [
-    "storage",
-    "alarms",
-    "tabs",
-    "activeTab"
-  ],
-
-  "host_permissions": [
-    "https://claude.ai/*",
-    "https://chatgpt.com/*",
-    "https://brain-tube.com/*",
-    "https://www.brain-tube.com/*",
-    "https://api.anthropic.com/*",
-    "https://braintube-mcp-production.up.railway.app/*"
-  ],
-
-  "options_page": "settings.html",
-
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["*://www.youtube.com/*", "https://claude.ai/*", "https://chatgpt.com/*"]
+    }
+  ]
 }
