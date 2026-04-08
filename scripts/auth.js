@@ -81,19 +81,29 @@ export async function getCurrentUser() {
   return session?.user || null;
 }
 
-// Sign in with Google via Supabase OAuth + chrome.identity
+// ── Google Sign-In (direct Google OAuth → Supabase token exchange) ────────────
+// Bypasses Supabase's redirect chain entirely. Flow:
+//   1. chrome.identity.launchWebAuthFlow → Google OAuth → extension redirect URI
+//   2. Parse Google access_token from redirect fragment
+//   3. Exchange with Supabase /auth/v1/token?grant_type=id_token
+//   4. Save Supabase session as bt_session
+
+// FILL IN: your Google OAuth Client ID from Google Cloud Console
+// (APIs & Services → Credentials → OAuth 2.0 Client IDs)
+const GOOGLE_CLIENT_ID     = 'YOUR_GOOGLE_CLIENT_ID';
+
+const GOOGLE_REDIRECT_URI  = 'https://fpnkboegjcldbadodocoinakhlafbdak.chromiumapp.org/';
 const GOOGLE_SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
 const GOOGLE_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4MzE3NjgsImV4cCI6MjAyNTQwNzc2OH0.JiMKbCPMvxdQN36DFuXBRjYKuC0TqFsEqRWCbVsNODs';
 
 export async function signInWithGoogle() {
-  // Use /auth suffix so Supabase can route the callback back to this exact URL
-  const redirectUrl = chrome.identity.getRedirectURL('auth');
-
+  // Step 1: Get Google access_token directly — no Supabase redirect involved
   const authUrl =
-    `${GOOGLE_SUPABASE_URL}/auth/v1/authorize` +
-    `?provider=google` +
-    `&redirect_to=${encodeURIComponent(redirectUrl)}` +
-    `&skip_http_redirect=true`;
+    `https://accounts.google.com/o/oauth2/auth` +
+    `?client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
+    `&response_type=token` +
+    `&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}` +
+    `&scope=${encodeURIComponent('email profile')}`;
 
   let responseUrl;
   try {
@@ -106,61 +116,50 @@ export async function signInWithGoogle() {
   }
 
   if (!responseUrl) throw new Error('No response from Google sign-in.');
+  console.log('[BrainTube] Google responseUrl:', responseUrl);
 
-  // Debug: log exactly what Supabase returned so we can inspect the shape
-  console.log('[BrainTube] Google OAuth responseUrl:', responseUrl);
-
-  // Close any brain-tube.com tab that Chrome may have opened as a side-effect
-  // of launchWebAuthFlow following the Supabase → brain-tube.com intermediate redirect
-  try {
-    const tabs = await chrome.tabs.query({ url: ['https://brain-tube.com/*', 'https://www.brain-tube.com/*'] });
-    for (const tab of tabs) {
-      if (tab.id) chrome.tabs.remove(tab.id);
-    }
-  } catch { /* best-effort */ }
-
-  const url = new URL(responseUrl);
-
-  // Supabase may return tokens in the hash fragment OR query params — check both
-  const hashParams  = new URLSearchParams(url.hash  ? url.hash.slice(1)  : '');
+  // Step 2: Parse Google access_token from redirect fragment
+  const url         = new URL(responseUrl);
+  const hashParams  = new URLSearchParams(url.hash ? url.hash.slice(1) : '');
   const queryParams = new URLSearchParams(url.search ? url.search.slice(1) : '');
+  const googleToken = hashParams.get('access_token') || queryParams.get('access_token');
 
-  const accessToken  = hashParams.get('access_token')  || queryParams.get('access_token');
-  const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-  const expiresIn    = hashParams.get('expires_in')    || queryParams.get('expires_in');
-
-  // Fallback: some Supabase versions embed the session in error_description
-  if (!accessToken) {
-    const errDesc = hashParams.get('error_description') || queryParams.get('error_description');
-    console.error('[BrainTube] No access_token found. error_description:', errDesc);
-    throw new Error(
-      errDesc
-        ? `Google sign-in failed: ${errDesc}`
-        : 'Google sign-in did not return an access token. Check console for responseUrl.'
-    );
+  if (!googleToken) {
+    const err = hashParams.get('error') || queryParams.get('error') || 'unknown';
+    throw new Error(`Google did not return an access token. Error: ${err}`);
   }
 
-  // Fetch user record from Supabase
-  const userResp = await fetch(`${GOOGLE_SUPABASE_URL}/auth/v1/user`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'apikey': GOOGLE_SUPABASE_ANON,
-    },
-  });
+  // Step 3: Exchange Google access_token with Supabase
+  const tokenResp = await fetch(
+    `${GOOGLE_SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': GOOGLE_SUPABASE_ANON,
+      },
+      body: JSON.stringify({ provider: 'google', token: googleToken }),
+    }
+  );
 
-  if (!userResp.ok) throw new Error('Failed to fetch user after Google sign-in.');
-  const user = await userResp.json();
+  if (!tokenResp.ok) {
+    const err = await tokenResp.json().catch(() => ({}));
+    throw new Error(`Supabase token exchange failed: ${err?.error_description || err?.msg || tokenResp.status}`);
+  }
 
+  const data = await tokenResp.json();
+
+  // Step 4: Save Supabase session as bt_session
   const session = {
-    access_token:  accessToken,
-    refresh_token: refreshToken,
-    expires_in:    expiresIn ? parseInt(expiresIn, 10) : 3600,
+    access_token:  data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in:    data.expires_in ?? 3600,
     token_type:    'bearer',
-    user,
+    user:          data.user,
   };
 
   await chrome.storage.local.set({ bt_session: session });
-  console.log('✅ Signed in with Google:', user.email);
+  console.log('✅ Signed in with Google:', data.user?.email);
   return session;
 }
 
