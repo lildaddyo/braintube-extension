@@ -38,6 +38,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.action.openPopup();
   }
 
+  // Google OAuth — popup delegates here so the flow survives popup close
+  if (message.type === 'START_GOOGLE_AUTH') {
+    startGoogleAuth();
+    return false;
+  }
+
   // AI conversation capture — sent from popup when on claude.ai or chatgpt.com
   if (message.type === 'SAVE_AI_CONVERSATION') {
     saveAiConversation(message.tabId, message.platform)
@@ -46,6 +52,87 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async
   }
 });
+
+// ── Google OAuth (PKCE / id_token flow) ──────────────────────────────────────
+// Runs in the service worker so it survives the popup closing mid-flow.
+// On completion broadcasts AUTH_SUCCESS or AUTH_ERROR to all extension pages.
+
+const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE';
+
+function startGoogleAuth() {
+  const manifest    = chrome.runtime.getManifest();
+  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org`;
+
+  const url = new URL('https://accounts.google.com/o/oauth2/auth');
+  url.searchParams.set('client_id',     manifest.oauth2.client_id);
+  url.searchParams.set('response_type', 'id_token');
+  url.searchParams.set('access_type',   'offline');
+  url.searchParams.set('redirect_uri',  redirectUri);
+  url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
+  url.searchParams.set('nonce',         Math.random().toString(36).substring(2));
+
+  chrome.identity.launchWebAuthFlow(
+    { url: url.href, interactive: true },
+    async (redirectedTo) => {
+      if (chrome.runtime.lastError || !redirectedTo) {
+        const err = chrome.runtime.lastError?.message ?? 'OAuth cancelled or failed';
+        console.error('[BrainTube] Google auth error:', err);
+        chrome.runtime.sendMessage({ type: 'AUTH_ERROR', error: err });
+        return;
+      }
+
+      // id_token is in the hash fragment — split on # to avoid the strip issue
+      const hash    = redirectedTo.split('#')[1] ?? '';
+      const params  = new URLSearchParams(hash);
+      const idToken = params.get('id_token');
+
+      if (!idToken) {
+        const errMsg = params.get('error') ?? 'No id_token in redirect';
+        console.error('[BrainTube] No id_token:', errMsg);
+        chrome.runtime.sendMessage({ type: 'AUTH_ERROR', error: errMsg });
+        return;
+      }
+
+      // Exchange id_token with Supabase
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
+          {
+            method:  'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey':       SUPABASE_ANON,
+            },
+            body: JSON.stringify({ provider: 'google', token: idToken }),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
+        }
+
+        const session = {
+          access_token:  data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in:    data.expires_in ?? 3600,
+          token_type:    'bearer',
+          user:          data.user,
+        };
+
+        await chrome.storage.local.set({ bt_session: session });
+        console.log('✅ Google sign-in complete:', data.user?.email);
+        chrome.runtime.sendMessage({ type: 'AUTH_SUCCESS', session });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[BrainTube] Supabase token exchange failed:', msg);
+        chrome.runtime.sendMessage({ type: 'AUTH_ERROR', error: msg });
+      }
+    }
+  );
+}
 
 // ── AI Conversation Capture ───────────────────────────────────────────────────
 

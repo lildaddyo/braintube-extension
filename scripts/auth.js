@@ -81,85 +81,33 @@ export async function getCurrentUser() {
   return session?.user || null;
 }
 
-// ── Google Sign-In (direct Google OAuth → Supabase token exchange) ────────────
-// Bypasses Supabase's redirect chain entirely. Flow:
-//   1. chrome.identity.launchWebAuthFlow → Google OAuth → extension redirect URI
-//   2. Parse Google access_token from redirect fragment
-//   3. Exchange with Supabase /auth/v1/token?grant_type=id_token
-//   4. Save Supabase session as bt_session
+// ── Google Sign-In ────────────────────────────────────────────────────────────
+// The popup closes during OAuth which would kill the flow, so we delegate
+// launchWebAuthFlow to the persistent service worker.
+// Popup calls this → sends START_GOOGLE_AUTH → listens for AUTH_SUCCESS.
 
-// FILL IN: your Google OAuth Client ID from Google Cloud Console
-// (APIs & Services → Credentials → OAuth 2.0 Client IDs)
-const GOOGLE_CLIENT_ID     = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
+export function signInWithGoogle() {
+  return new Promise((resolve, reject) => {
+    // Ask the service worker to run the flow
+    chrome.runtime.sendMessage({ type: 'START_GOOGLE_AUTH' });
 
-const GOOGLE_REDIRECT_URI  = 'https://fpnkboegjcldbadodocoinakhlafbdak.chromiumapp.org/';
-const GOOGLE_SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
-const GOOGLE_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4MzE3NjgsImV4cCI6MjAyNTQwNzc2OH0.JiMKbCPMvxdQN36DFuXBRjYKuC0TqFsEqRWCbVsNODs';
-
-export async function signInWithGoogle() {
-  // Step 1: Get Google access_token directly — no Supabase redirect involved
-  const authUrl =
-    `https://accounts.google.com/o/oauth2/auth` +
-    `?client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
-    `&response_type=token` +
-    `&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}` +
-    `&scope=${encodeURIComponent('email profile')}`;
-
-  let responseUrl;
-  try {
-    responseUrl = await chrome.identity.launchWebAuthFlow({
-      url:         authUrl,
-      interactive: true,
-    });
-  } catch (err) {
-    throw new Error('Google sign-in was cancelled or failed.');
-  }
-
-  if (!responseUrl) throw new Error('No response from Google sign-in.');
-  console.log('[BrainTube] Google responseUrl:', responseUrl);
-
-  // Step 2: Parse Google access_token from redirect fragment
-  const url         = new URL(responseUrl);
-  const hashParams  = new URLSearchParams(url.hash ? url.hash.slice(1) : '');
-  const queryParams = new URLSearchParams(url.search ? url.search.slice(1) : '');
-  const googleToken = hashParams.get('access_token') || queryParams.get('access_token');
-
-  if (!googleToken) {
-    const err = hashParams.get('error') || queryParams.get('error') || 'unknown';
-    throw new Error(`Google did not return an access token. Error: ${err}`);
-  }
-
-  // Step 3: Exchange Google access_token with Supabase
-  const tokenResp = await fetch(
-    `${GOOGLE_SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': GOOGLE_SUPABASE_ANON,
-      },
-      body: JSON.stringify({ provider: 'google', token: googleToken }),
+    // Listen for the result — service worker broadcasts AUTH_SUCCESS or AUTH_ERROR
+    function onMessage(msg) {
+      if (msg.type === 'AUTH_SUCCESS') {
+        chrome.runtime.onMessage.removeListener(onMessage);
+        resolve(msg.session);
+      } else if (msg.type === 'AUTH_ERROR') {
+        chrome.runtime.onMessage.removeListener(onMessage);
+        reject(new Error(msg.error));
+      }
     }
-  );
+    chrome.runtime.onMessage.addListener(onMessage);
 
-  if (!tokenResp.ok) {
-    const err = await tokenResp.json().catch(() => ({}));
-    throw new Error(`Supabase token exchange failed: ${err?.error_description || err?.msg || tokenResp.status}`);
-  }
-
-  const data = await tokenResp.json();
-
-  // Step 4: Save Supabase session as bt_session
-  const session = {
-    access_token:  data.access_token,
-    refresh_token: data.refresh_token,
-    expires_in:    data.expires_in ?? 3600,
-    token_type:    'bearer',
-    user:          data.user,
-  };
-
-  await chrome.storage.local.set({ bt_session: session });
-  console.log('✅ Signed in with Google:', data.user?.email);
-  return session;
+    // Timeout after 2 minutes in case the user never completes the flow
+    setTimeout(() => {
+      chrome.runtime.onMessage.removeListener(onMessage);
+      reject(new Error('Google sign-in timed out.'));
+    }, 120_000);
+  });
 }
 
