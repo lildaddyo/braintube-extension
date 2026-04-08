@@ -1,6 +1,6 @@
 // BrainTube - Google OAuth handler
 // Runs inside auth.html (a persistent tab) so it survives popup close.
-// Flow: launchWebAuthFlow → parse id_token → exchange with Supabase →
+// Flow: launchWebAuthFlow → parse id_token from hash → exchange with Supabase →
 //       save bt_session → close tab. Popup picks up session via storage.onChanged.
 
 const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
@@ -39,67 +39,51 @@ async function runGoogleAuth() {
       if (chrome.runtime.lastError || !redirectedTo) {
         const err = chrome.runtime.lastError?.message ?? 'Sign-in cancelled';
         console.error('[BrainTube] launchWebAuthFlow error:', err);
-        setStatus(`Sign-in cancelled or failed. You can close this tab.`, true);
+        setStatus('Sign-in cancelled or failed. You can close this tab.', true);
         return;
       }
 
-      // Detailed logging so we can see exactly what Chrome returns
       console.log('[BrainTube] Full redirect URL:', redirectedTo);
       console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1]  ?? 'none');
       console.log('[BrainTube] Search:', redirectedTo.split('?')[1]  ?? 'none');
 
-      // Parse BOTH hash fragment and query string — Chrome may put tokens in either
-      const hashPart   = redirectedTo.split('#')[1] ?? '';
-      const queryPart  = new URL(redirectedTo.includes('#') ? redirectedTo.split('#')[0] : redirectedTo).search.slice(1);
-      const hashParams  = new URLSearchParams(hashPart);
-      const queryParams = new URLSearchParams(queryPart);
+      // Split on '#' and pass the raw string directly to URLSearchParams.
+      // Do NOT use new URL().hash — it preserves the leading '#' which makes
+      // the first key "#iss" instead of "iss", breaking all param lookups.
+      const hashString = redirectedTo.split('#')[1] || '';
+      const params     = new URLSearchParams(hashString);
+      const idToken    = params.get('id_token');
 
-      const idToken     = hashParams.get('id_token')      || queryParams.get('id_token');
-      const accessToken = hashParams.get('access_token')  || queryParams.get('access_token');
+      console.log('[BrainTube] id_token extracted:', idToken ? idToken.substring(0, 20) + '...' : 'NOT FOUND');
 
-      console.log('[BrainTube] id_token found:',     !!idToken);
-      console.log('[BrainTube] access_token found:', !!accessToken);
-
-      if (!idToken && !accessToken) {
-        const err = hashParams.get('error') || queryParams.get('error') || 'No tokens in redirect';
-        console.error('[BrainTube] No tokens. hash:', hashPart, 'query:', queryPart);
-        setStatus(`Google did not return a token: ${err}`, true);
+      if (!idToken) {
+        const err = params.get('error') ?? 'id_token not found in redirect hash';
+        console.error('[BrainTube] Could not extract id_token. hashString:', hashString);
+        setStatus(`Could not extract id_token from redirect: ${err}`, true);
         return;
       }
 
       setStatus('Signing in to BrainTube…');
 
       try {
-        let res, data;
-
-        if (idToken) {
-          // Preferred: exchange Google id_token directly with Supabase
-          console.log('[BrainTube] Trying grant_type=id_token…');
-          res  = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
+        const res = await fetch(
+          `${SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
+          {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-            body:    JSON.stringify({ provider: 'google', token: idToken }),
-          });
-          data = await res.json();
-          console.log('[BrainTube] id_token exchange status:', res.status, JSON.stringify(data));
-        }
-
-        // Fallback: if id_token exchange failed or we only have access_token
-        if (!idToken || !res.ok || !data?.access_token) {
-          if (accessToken) {
-            console.log('[BrainTube] Falling back to access_token exchange…');
-            res  = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-              body:    JSON.stringify({ provider: 'google', token: accessToken }),
-            });
-            data = await res.json();
-            console.log('[BrainTube] access_token exchange status:', res.status, JSON.stringify(data));
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey':       SUPABASE_ANON,
+            },
+            body: JSON.stringify({ provider: 'google', token: idToken }),
           }
-        }
+        );
 
-        if (!res.ok || !data?.access_token) {
-          throw new Error(data?.error_description ?? data?.msg ?? `HTTP ${res.status}`);
+        console.log('[BrainTube] Supabase status:', res.status);
+        const data = await res.json();
+        console.log('[BrainTube] Supabase response:', JSON.stringify(data));
+
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
         }
 
         const session = {
