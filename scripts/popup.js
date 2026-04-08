@@ -1,5 +1,5 @@
 // BrainTube Extension - Popup Script
-import { signIn, signOut, getSession, getCurrentUser, signInWithGoogle } from './auth.js';
+import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
 import { processYouTube, getItem, trackEvent } from './api.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG } from './config.js';
@@ -228,28 +228,17 @@ passwordInput.addEventListener('keypress', (e) => {
 });
 
 googleSigninBtn.addEventListener('click', () => {
-  googleSigninBtn.disabled    = true;
-  googleSigninBtn.textContent = 'Signing in…';
-
-  // Delegate to service worker — the popup may close during the OAuth window
-  // and the service worker keeps the flow alive, then broadcasts AUTH_SUCCESS
-  signInWithGoogle()
-    .then(async (session) => {
-      await showMainSection(session);
-      await loadCurrentVideo();
-    })
-    .catch((error) => {
-      alert(error.message || 'Google sign-in failed');
-      googleSigninBtn.disabled = false;
-      googleSigninBtn.innerHTML = GOOGLE_BTN_INNER;
-    });
+  // Open auth.html in a new tab — it survives popup close and runs
+  // launchWebAuthFlow to completion, then saves bt_session to storage.
+  chrome.tabs.create({ url: chrome.runtime.getURL('auth.html') });
 });
 
-// Listen for AUTH_SUCCESS broadcast from service worker in case the popup
-// was re-opened after the OAuth window closed
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'AUTH_SUCCESS') {
-    showMainSection(msg.session).then(() => loadCurrentVideo());
+// When bt_session appears in storage (set by auth.html on success),
+// reload the popup UI — handles the case where the popup is still open
+// or was re-opened by the user after completing sign-in.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.bt_session?.newValue) {
+    showMainSection(changes.bt_session.newValue).then(() => loadCurrentVideo());
   }
 });
 

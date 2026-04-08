@@ -81,33 +81,4 @@ export async function getCurrentUser() {
   return session?.user || null;
 }
 
-// ── Google Sign-In ────────────────────────────────────────────────────────────
-// The popup closes during OAuth which would kill the flow, so we delegate
-// launchWebAuthFlow to the persistent service worker.
-// Popup calls this → sends START_GOOGLE_AUTH → listens for AUTH_SUCCESS.
-
-export function signInWithGoogle() {
-  return new Promise((resolve, reject) => {
-    // Ask the service worker to run the flow
-    chrome.runtime.sendMessage({ type: 'START_GOOGLE_AUTH' });
-
-    // Listen for the result — service worker broadcasts AUTH_SUCCESS or AUTH_ERROR
-    function onMessage(msg) {
-      if (msg.type === 'AUTH_SUCCESS') {
-        chrome.runtime.onMessage.removeListener(onMessage);
-        resolve(msg.session);
-      } else if (msg.type === 'AUTH_ERROR') {
-        chrome.runtime.onMessage.removeListener(onMessage);
-        reject(new Error(msg.error));
-      }
-    }
-    chrome.runtime.onMessage.addListener(onMessage);
-
-    // Timeout after 2 minutes in case the user never completes the flow
-    setTimeout(() => {
-      chrome.runtime.onMessage.removeListener(onMessage);
-      reject(new Error('Google sign-in timed out.'));
-    }, 120_000);
-  });
-}
 

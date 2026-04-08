@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BrainTube – Signing in…</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 40px 48px;
+      text-align: center;
+      max-width: 360px;
+    }
+    .logo { width: 56px; height: 56px; border-radius: 12px; margin-bottom: 20px; }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    #status { font-size: 15px; opacity: 0.85; line-height: 1.5; }
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      animation: spin 0.9s linear infinite;
+      margin: 20px auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="icons/icon-128.png" class="logo" alt="BrainTube">
+    <h1>BrainTube</h1>
+    <p id="status">Connecting to Google…</p>
+    <div class="spinner" id="spinner"></div>
+  </div>
+  <script src="scripts/auth-handler.js"></script>
+</body>
+</html>
