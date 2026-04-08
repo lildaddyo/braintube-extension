@@ -74,7 +74,7 @@ url.searchParams.set('redirect_uri',  redirectUri);
               'Content-Type': 'application/json',
               'apikey':       SUPABASE_ANON,
             },
-            body: JSON.stringify({ provider: 'google', token: idToken, nonce }),
+            body: JSON.stringify({ provider: 'google', id_token: idToken, nonce }),
           }
         );
 
