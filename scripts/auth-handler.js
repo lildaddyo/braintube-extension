@@ -26,8 +26,7 @@ async function runGoogleAuth() {
   const url = new URL('https://accounts.google.com/o/oauth2/auth');
   url.searchParams.set('client_id',     manifest.oauth2.client_id);
   url.searchParams.set('response_type', 'token id_token');
-  url.searchParams.set('access_type',   'offline');
-  url.searchParams.set('redirect_uri',  redirectUri);
+url.searchParams.set('redirect_uri',  redirectUri);
   url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
   url.searchParams.set('nonce',         Math.random().toString(36).substring(2));
 
