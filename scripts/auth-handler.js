@@ -25,7 +25,7 @@ async function runGoogleAuth() {
 
   const url = new URL('https://accounts.google.com/o/oauth2/auth');
   url.searchParams.set('client_id',     manifest.oauth2.client_id);
-  url.searchParams.set('response_type', 'id_token');
+  url.searchParams.set('response_type', 'token id_token');
   url.searchParams.set('access_type',   'offline');
   url.searchParams.set('redirect_uri',  redirectUri);
   url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
@@ -43,17 +43,26 @@ async function runGoogleAuth() {
         return;
       }
 
-      console.log('[BrainTube] redirectedTo:', redirectedTo);
+      // Detailed logging so we can see exactly what Chrome returns
+      console.log('[BrainTube] Full redirect URL:', redirectedTo);
+      console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1]  ?? 'none');
+      console.log('[BrainTube] Search:', redirectedTo.split('?')[1]  ?? 'none');
 
-      // Split on '#' before parsing — launchWebAuthFlow may strip the hash
-      // from a URL object but it survives as a raw string
-      const hash    = redirectedTo.split('#')[1] ?? '';
-      const params  = new URLSearchParams(hash);
-      const idToken = params.get('id_token');
+      // Parse BOTH hash fragment and query string — Chrome may put tokens in either
+      const hashPart   = redirectedTo.split('#')[1] ?? '';
+      const queryPart  = new URL(redirectedTo.includes('#') ? redirectedTo.split('#')[0] : redirectedTo).search.slice(1);
+      const hashParams  = new URLSearchParams(hashPart);
+      const queryParams = new URLSearchParams(queryPart);
 
-      if (!idToken) {
-        const err = params.get('error') ?? 'No id_token in redirect';
-        console.error('[BrainTube] No id_token. Params:', hash);
+      const idToken     = hashParams.get('id_token')      || queryParams.get('id_token');
+      const accessToken = hashParams.get('access_token')  || queryParams.get('access_token');
+
+      console.log('[BrainTube] id_token found:',     !!idToken);
+      console.log('[BrainTube] access_token found:', !!accessToken);
+
+      if (!idToken && !accessToken) {
+        const err = hashParams.get('error') || queryParams.get('error') || 'No tokens in redirect';
+        console.error('[BrainTube] No tokens. hash:', hashPart, 'query:', queryPart);
         setStatus(`Google did not return a token: ${err}`, true);
         return;
       }
@@ -61,24 +70,36 @@ async function runGoogleAuth() {
       setStatus('Signing in to BrainTube…');
 
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
-          {
+        let res, data;
+
+        if (idToken) {
+          // Preferred: exchange Google id_token directly with Supabase
+          console.log('[BrainTube] Trying grant_type=id_token…');
+          res  = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
             method:  'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey':       SUPABASE_ANON,
-            },
-            body: JSON.stringify({ provider: 'google', token: idToken }),
+            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+            body:    JSON.stringify({ provider: 'google', token: idToken }),
+          });
+          data = await res.json();
+          console.log('[BrainTube] id_token exchange status:', res.status, JSON.stringify(data));
+        }
+
+        // Fallback: if id_token exchange failed or we only have access_token
+        if (!idToken || !res.ok || !data?.access_token) {
+          if (accessToken) {
+            console.log('[BrainTube] Falling back to access_token exchange…');
+            res  = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+              body:    JSON.stringify({ provider: 'google', token: accessToken }),
+            });
+            data = await res.json();
+            console.log('[BrainTube] access_token exchange status:', res.status, JSON.stringify(data));
           }
-        );
+        }
 
-        console.log('[BrainTube] Supabase status:', res.status);
-        const data = await res.json();
-        console.log('[BrainTube] Supabase response:', JSON.stringify(data));
-
-        if (!res.ok || !data.access_token) {
-          throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
+        if (!res.ok || !data?.access_token) {
+          throw new Error(data?.error_description ?? data?.msg ?? `HTTP ${res.status}`);
         }
 
         const session = {
