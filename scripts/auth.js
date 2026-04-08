@@ -90,7 +90,7 @@ export async function getCurrentUser() {
 
 // FILL IN: your Google OAuth Client ID from Google Cloud Console
 // (APIs & Services → Credentials → OAuth 2.0 Client IDs)
-const GOOGLE_CLIENT_ID     = 'YOUR_GOOGLE_CLIENT_ID';
+const GOOGLE_CLIENT_ID     = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
 
 const GOOGLE_REDIRECT_URI  = 'https://fpnkboegjcldbadodocoinakhlafbdak.chromiumapp.org/';
 const GOOGLE_SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
