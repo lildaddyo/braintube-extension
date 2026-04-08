@@ -108,7 +108,14 @@ url.searchParams.set('redirect_uri',  redirectUri);
         console.log('✅ Signed in:', data.user?.email);
 
         setStatus(`Signed in as ${data.user?.email}. Closing…`);
-        setTimeout(() => window.close(), 1200);
+        setTimeout(() => {
+          window.close();
+          // Fallback: if window.close() is blocked, show manual close option
+          setTimeout(() => {
+            spinnerEl.classList.add('hidden');
+            statusEl.innerHTML = `✅ Login successful! You can close this tab.<br><br><button onclick="window.close()" style="margin-top:12px;padding:10px 20px;background:#fff;color:#333;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;">Close Tab</button>`;
+          }, 500);
+        }, 2500);
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

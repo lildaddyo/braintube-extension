@@ -3,20 +3,34 @@ import { CONFIG, buildUrl, getHeaders } from './config.js';
 
 // Save YouTube video
 export async function processYouTube(url, videoId) {
-  const response = await fetch(
-    buildUrl(CONFIG.ENDPOINTS.PROCESS_YOUTUBE),
-    {
-      method: 'POST',
-      headers: await getHeaders(),
-      body: JSON.stringify({ url, videoId })
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  let response;
+  try {
+    response = await fetch(
+      buildUrl(CONFIG.ENDPOINTS.PROCESS_YOUTUBE),
+      {
+        method: 'POST',
+        headers: await getHeaders(),
+        body: JSON.stringify({ url, videoId }),
+        signal: controller.signal,
+      }
+    );
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Video save timed out after 30 seconds. The server may be busy — try again.');
     }
-  );
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to save video');
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Server error ${response.status}`);
+  }
+
   return await response.json();
 }
 

@@ -48,10 +48,10 @@ export function buildUrl(endpoint) {
   return `${CONFIG.SUPABASE_URL}${endpoint}`;
 }
 
-// Helper to get auth headers
+// Helper to get auth headers — checks bt_session (Google OAuth) then session (email/password)
 export async function getHeaders() {
-  const session = await chrome.storage.local.get(['session']);
-  const accessToken = session.session?.access_token;
+  const stored = await chrome.storage.local.get(['session', 'bt_session']);
+  const accessToken = (stored.bt_session || stored.session)?.access_token;
   
   return {
     'Authorization': `Bearer ${accessToken}`,
