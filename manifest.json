@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name": "BrainTube – AI Conversation Capture",
+  "version": "1.0.0",
+  "description": "Save summaries of your Claude and ChatGPT conversations to your BrainTube knowledge base.",
+
+  "icons": {
+    "16":  "icons/braintube-logo.png",
+    "32":  "icons/braintube-logo.png",
+    "48":  "icons/braintube-logo.png",
+    "128": "icons/braintube-logo.png"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "icons/braintube-logo.png",
+      "32":  "icons/braintube-logo.png",
+      "48":  "icons/braintube-logo.png",
+      "128": "icons/braintube-logo.png"
+    },
+    "default_title": "BrainTube"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content/claude.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["content/chatgpt.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://brain-tube.com/*", "https://www.brain-tube.com/*"],
+      "js": ["content/brain-tube.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://brain-tube.com/*",
+    "https://www.brain-tube.com/*",
+    "https://api.anthropic.com/*",
+    "https://braintube-mcp-production.up.railway.app/*"
+  ],
+
+  "options_page": "settings.html",
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

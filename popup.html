@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrainTube</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <img src="icons/braintube-logo.png" alt="BrainTube" class="logo">
+    <div class="header-text">
+      <span class="brand">BrainTube</span>
+      <span class="site-badge" id="siteBadge"></span>
+    </div>
+    <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
+  </div>
+
+  <div id="stateNotSupported" class="state hidden">
+    <div class="state-icon">🔒</div>
+    <p class="state-title">Not available here</p>
+    <p class="state-sub">Open a conversation on claude.ai or chatgpt.com</p>
+  </div>
+
+  <div id="stateDisabled" class="state hidden">
+    <div class="state-icon">⏸</div>
+    <p class="state-title">Capture disabled for this site</p>
+    <p class="state-sub">Enable it in <a href="#" id="enableLink">settings</a></p>
+  </div>
+
+  <div id="stateNotLoggedIn" class="state hidden">
+    <div class="state-icon">🔒</div>
+    <p class="state-title">Not logged in</p>
+    <p class="state-sub">Please <a href="https://brain-tube.com" target="_blank" id="loginLink">log in to brain-tube.com</a> first, then try again</p>
+  </div>
+
+  <div id="stateReady" class="state hidden">
+    <div class="conversation-info">
+      <div class="info-row">
+        <span class="info-label">Messages</span>
+        <span class="info-value" id="messageCount">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Capture</span>
+        <span class="info-value capture-active">● Active</span>
+      </div>
+      <div class="info-row" id="lastSavedRow" style="display:none">
+        <span class="info-label">Last saved</span>
+        <span class="info-value" id="lastSaved">—</span>
+      </div>
+    </div>
+
+    <div id="autoSaveBadge" class="auto-save-badge hidden">
+      <span>⚡ Auto-save on</span>
+    </div>
+
+    <button class="save-btn" id="saveBtn">
+      <span id="saveBtnText">Save to BrainTube</span>
+    </button>
+
+    <p class="privacy-note">Only the summary is saved — never raw text</p>
+  </div>
+
+  <div id="stateLoading" class="state hidden">
+    <div class="spinner"></div>
+    <p class="state-title" id="loadingMsg">Summarising…</p>
+    <p class="state-sub">Summarising on BrainTube server…</p>
+  </div>
+
+  <div id="stateSuccess" class="state hidden">
+    <div class="state-icon success-icon">✓</div>
+    <p class="state-title">Saved!</p>
+    <p class="state-sub" id="savedTitle"></p>
+    <button class="secondary-btn" id="saveAnotherBtn">Save another</button>
+  </div>
+
+  <div id="stateError" class="state hidden">
+    <div class="state-icon error-icon">✕</div>
+    <p class="state-title">Save failed</p>
+    <p class="state-sub error-msg" id="errorMsg"></p>
+    <button class="secondary-btn" id="retryBtn">Retry</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
