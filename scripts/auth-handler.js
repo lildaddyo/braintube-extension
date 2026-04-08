@@ -28,8 +28,18 @@ async function runGoogleAuth() {
   url.searchParams.set('response_type', 'token id_token');
 url.searchParams.set('redirect_uri',  redirectUri);
   url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
-  const nonce = Math.random().toString(36).substring(2);
-  url.searchParams.set('nonce', nonce);
+  // Generate raw nonce
+  const rawNonce = Math.random().toString(36).substring(2);
+
+  // Hash it for Google
+  const encoder = new TextEncoder();
+  const data = encoder.encode(rawNonce);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // Send hashed nonce to Google, raw nonce to Supabase
+  url.searchParams.set('nonce', hashedNonce);
 
   setStatus('Waiting for Google sign-in…');
 
@@ -74,7 +84,7 @@ url.searchParams.set('redirect_uri',  redirectUri);
               'Content-Type': 'application/json',
               'apikey':       SUPABASE_ANON,
             },
-            body: JSON.stringify({ provider: 'google', id_token: idToken, nonce }),
+            body: JSON.stringify({ provider: 'google', id_token: idToken, nonce: rawNonce }),
           }
         );
 
