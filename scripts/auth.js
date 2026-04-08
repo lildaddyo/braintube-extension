@@ -110,6 +110,15 @@ export async function signInWithGoogle() {
   // Debug: log exactly what Supabase returned so we can inspect the shape
   console.log('[BrainTube] Google OAuth responseUrl:', responseUrl);
 
+  // Close any brain-tube.com tab that Chrome may have opened as a side-effect
+  // of launchWebAuthFlow following the Supabase → brain-tube.com intermediate redirect
+  try {
+    const tabs = await chrome.tabs.query({ url: ['https://brain-tube.com/*', 'https://www.brain-tube.com/*'] });
+    for (const tab of tabs) {
+      if (tab.id) chrome.tabs.remove(tab.id);
+    }
+  } catch { /* best-effort */ }
+
   const url = new URL(responseUrl);
 
   // Supabase may return tokens in the hash fragment OR query params — check both
