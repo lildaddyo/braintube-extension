@@ -1,8 +1,8 @@
 // BrainTube Extension - Configuration
 
 export const CONFIG = {
-  SUPABASE_URL: 'https://pmwuwzoqnhqqqseddzes.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtd3V3em9xbmhxcXFzZWRkemVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NTkzNzEsImV4cCI6MjA4NDIzNTM3MX0.iImRcTa1_fTCNeG6JzUdRY7KTgN19hCVcSYnrP3kUEE',
+  SUPABASE_URL: 'https://iqjnmmtvhyavgrsxpoao.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE',
   WEB_APP_URL: 'https://brain-tube.com',
   
   // API Endpoints
