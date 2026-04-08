@@ -59,9 +59,9 @@ async function saveAiConversation(tabId, platform) {
     throw new Error('Conversation is too short or could not be extracted.');
   }
 
-  // 2. Get auth token from stored session (same session used for YouTube features)
-  const { session } = await chrome.storage.local.get(['session']);
-  const token = session?.access_token;
+  // 2. Get auth token — bt_session (Google OAuth) or session (email/password)
+  const stored = await chrome.storage.local.get(['session', 'bt_session']);
+  const token = (stored.bt_session || stored.session)?.access_token;
   if (!token) {
     throw new Error('NOT_LOGGED_IN');
   }
