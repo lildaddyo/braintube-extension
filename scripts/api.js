@@ -89,25 +89,65 @@ export async function quickSearch(query, userId) {
 
 // AI chat about a video
 // messages: [{ role: 'user'|'assistant', content: string }]
-// video_id: the item UUID (Supabase items.id)
+// videoId: the item UUID (Supabase items.id)
 export async function chat(messages, videoId) {
   const response = await fetch(
     buildUrl(CONFIG.ENDPOINTS.CHAT),
     {
       method: 'POST',
       headers: await getHeaders(),
-      body: JSON.stringify({ messages, video_id: videoId })
+      body: JSON.stringify({ messages, itemId: videoId })
     }
   );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Chat API error:', response.status, errorText);
-    throw new Error(`Chat failed: ${response.status}`);
+  const contentType = response.headers.get('content-type') || '';
+
+  // Non-OK or non-streaming: read as text for diagnostics
+  if (!response.ok || !contentType.includes('text/event-stream')) {
+    const text = await response.text();
+    console.error('[BrainTube] chat raw response:', text);
+    if (!response.ok) {
+      let msg = `Chat failed (${response.status})`;
+      try { msg = JSON.parse(text).error || msg; } catch { /* not JSON */ }
+      throw new Error(msg);
+    }
+    // 200 OK but not SSE — try JSON fallback then bail
+    try {
+      const data = JSON.parse(text);
+      if (data.error) throw new Error(data.error);
+      return data.reply || data.response || data.message || data.content || text;
+    } catch {
+      throw new Error('Unexpected response from chat service. Please try again.');
+    }
   }
 
-  const data = await response.json();
-  return data.reply || data.response || data.message || data.content;
+  // SSE streaming — accumulate delta content chunks
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // hold incomplete line for next chunk
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const chunk = JSON.parse(raw);
+        if (chunk.citations) continue; // citations metadata event — skip
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) fullText += delta;
+      } catch { /* ignore malformed SSE chunks */ }
+    }
+  }
+
+  if (!fullText) throw new Error('Chat returned an empty response. Please try again.');
+  return fullText;
 }
 
 // Check subscription status

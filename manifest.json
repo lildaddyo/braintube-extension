@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BrainTube - YouTube Knowledge Base",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAplZZ1KBlmEJe4lwlX0PvUID8+S/IOD6L9kkY1veeiFoRLMrpKeLdUNzvQMfJp1BdYih336fs9e+j7EOoUZHGofbeVQLdMwdsHRW01kAbSEghCcvgPqWs3jpsIVfBFZTjQIFCRJWlfIoXv/R/NjZjcckEQjyEvx/2v30VO6Vl2gk9iKbr5qehyv3euKHkbAsr2pYlRuAlpXr0VlH8gT2Dc7XykIeQTCBsL+SqCYWqUb12r6ljzB9Uhxfwt616t8KojHMjtxweRAag3X5Lw5qdu8p2lEltldT/rDHHVDZiMuujniFWMPqyWO7tfMl4RiDeYdNW1dotN69eM3sctVL3EQIDAQAB",
   "version": "1.0.0",
   "description": "Save YouTube videos, get AI summaries, and search your knowledge base.",
   "permissions": [
