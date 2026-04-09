@@ -19,9 +19,12 @@ function setStatus(msg, isError = false) {
 
 async function runGoogleAuth() {
   const manifest    = chrome.runtime.getManifest();
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+  // Use chrome.identity.getRedirectURL() — the authoritative URL Chrome passes
+  // to launchWebAuthFlow. Must match exactly what's registered in Google Console.
+  const redirectUri = chrome.identity.getRedirectURL();
 
   console.log('[BrainTube] auth-handler redirect_uri:', redirectUri);
+  console.log('[BrainTube] extension id:', chrome.runtime.id);
 
   const url = new URL('https://accounts.google.com/o/oauth2/auth');
   url.searchParams.set('client_id',     manifest.oauth2.client_id);
