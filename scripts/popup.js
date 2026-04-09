@@ -291,8 +291,16 @@ aiChatBtn.addEventListener('click', () => {
   });
 });
 
-openLibraryBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: `${CONFIG.WEB_APP_URL}/library` });
+openLibraryBtn.addEventListener('click', async () => {
+  // Read session from storage and append tokens to the URL hash so the web
+  // app can call supabase.auth.setSession() and log the user in automatically.
+  const all = await chrome.storage.local.get(['bt_session', 'session']);
+  const session = all.bt_session || all.session;
+  let url = `${CONFIG.WEB_APP_URL}/library`;
+  if (session?.access_token && session?.refresh_token) {
+    url += `#access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}&token_type=bearer`;
+  }
+  chrome.tabs.create({ url });
 });
 
 searchInput.addEventListener('keypress', (e) => {
