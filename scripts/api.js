@@ -164,7 +164,9 @@ export async function checkSubscription() {
   return await response.json();
 }
 
-// Track event
+// Track event — fire-and-forget; errors are silently swallowed because
+// the /functions/v1/track endpoint is currently broken and would spam
+// the console on every popup open.
 export async function trackEvent(eventName, eventData = {}) {
   try {
     await fetch(
@@ -179,9 +181,7 @@ export async function trackEvent(eventName, eventData = {}) {
         })
       }
     );
-  } catch (error) {
-    console.error('Track event failed:', error);
-  }
+  } catch { /* intentionally silent */ }
 }
 
 // Database queries
