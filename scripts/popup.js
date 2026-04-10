@@ -88,10 +88,16 @@ function showAuthSection() {
 async function showMainSection(session) {
   authSection.style.display = 'none';
   mainSection.style.display = 'block';
-  
+
+  // Guard: briefly disable the "Open Library" button so that any residual
+  // keypress or focus event from the auth flow cannot accidentally fire it
+  // during the transition from the auth view to the main view.
+  openLibraryBtn.disabled = true;
+  setTimeout(() => { openLibraryBtn.disabled = false; }, 800);
+
   const user = await getCurrentUser();
   userEmail.textContent = user?.email || 'User';
-  
+
   await trackEvent('extension_opened');
 }
 
@@ -264,6 +270,7 @@ googleSigninBtn.addEventListener('click', () => {
 // or was re-opened by the user after completing sign-in.
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.bt_session?.newValue) {
+    console.log('[BrainTube] popup: bt_session set — updating UI (no tabs will be opened)');
     showMainSection(changes.bt_session.newValue).then(() => loadCurrentVideo());
   }
 });
@@ -291,7 +298,16 @@ aiChatBtn.addEventListener('click', () => {
   });
 });
 
-openLibraryBtn.addEventListener('click', async () => {
+openLibraryBtn.addEventListener('click', async (e) => {
+  // Hard guard: only proceed on a genuine user gesture. Programmatically
+  // dispatched clicks (e.isTrusted === false) are silently blocked, which
+  // prevents any automated code path from opening brain-tube.com.
+  if (!e.isTrusted) {
+    console.warn('[BrainTube] openLibraryBtn: non-trusted click blocked');
+    return;
+  }
+  console.log('[BrainTube] openLibraryBtn: user clicked — opening library tab');
+
   // Read session from storage and append tokens to the URL hash so the web
   // app can call supabase.auth.setSession() and log the user in automatically.
   const all = await chrome.storage.local.get(['bt_session', 'session']);
