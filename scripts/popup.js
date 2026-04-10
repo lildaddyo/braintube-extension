@@ -1,6 +1,6 @@
 // BrainTube Extension - Popup Script
 import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
-import { processYouTube, getItem, trackEvent } from './api.js';
+import { processYouTube, getItem, trackEvent, saveWebPage, saveBookmark } from './api.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getSession as getStorageSession } from './config.js';
 
@@ -42,6 +42,8 @@ const userEmail = document.getElementById('user-email');
 const viewNoteBtn = document.getElementById('view-note-btn');
 const aiChatBtn = document.getElementById('ai-chat-btn');
 const saveVideoBtn = document.getElementById('save-video-btn');
+const saveUrlBtn = document.getElementById('save-url-btn');
+const bookmarkBtn = document.getElementById('bookmark-btn');
 const openLibraryBtn = document.getElementById('open-library-btn');
 
 let currentVideo = null;
@@ -376,6 +378,50 @@ async function handleSaveVideo() {
   }
 }
 
+// Handle Save URL — saves the current tab as a generic web item (any page)
+async function handleSaveUrl() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+
+  saveUrlBtn.disabled = true;
+  saveUrlBtn.textContent = '⏳ Saving…';
+
+  try {
+    const user = await getCurrentUser();
+    if (!user?.id) throw new Error('Not signed in');
+    await saveWebPage(user.id, tab.title, tab.url);
+    saveUrlBtn.textContent = '✓ Saved!';
+    showToast('Page saved to your library!');
+    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+  } catch (err) {
+    showToast(err.message || 'Save failed', true);
+    saveUrlBtn.textContent = '❌ Error';
+    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+  }
+}
+
+// Handle Bookmark — saves the current tab as a bookmark (any page)
+async function handleBookmark() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+
+  bookmarkBtn.disabled = true;
+  bookmarkBtn.textContent = '⏳ Saving…';
+
+  try {
+    const user = await getCurrentUser();
+    if (!user?.id) throw new Error('Not signed in');
+    await saveBookmark(user.id, tab.title, tab.url);
+    bookmarkBtn.textContent = '✓ Bookmarked!';
+    showToast('Bookmarked! Find it in the 🔖 Saved tab.');
+    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
+  } catch (err) {
+    showToast(err.message || 'Bookmark failed', true);
+    bookmarkBtn.textContent = '❌ Error';
+    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
+  }
+}
+
 // Event Listeners
 signinBtn.addEventListener('click', handleSignIn);
 passwordInput.addEventListener('keypress', (e) => {
@@ -401,6 +447,8 @@ signoutBtn.addEventListener('click', async () => {
 });
 
 saveVideoBtn.addEventListener('click', handleSaveVideo);
+saveUrlBtn.addEventListener('click', handleSaveUrl);
+bookmarkBtn.addEventListener('click', handleBookmark);
 
 viewNoteBtn.addEventListener('click', () => {
   if (currentVideo?.item) {

@@ -217,6 +217,35 @@ export async function getHighlights(itemId) {
   return await response.json();
 }
 
+// ── Web page / URL save ────────────────────────────────────────────────────────
+
+// Save any URL as a generic web item (source_type: 'web', is_bookmark: false).
+export async function saveWebPage(userId, title, url) {
+  const body = {
+    user_id:     userId,
+    title:       (title || url || 'Untitled Page').trim().slice(0, 500),
+    source_url:  url || null,
+    source_type: 'web',
+    summary:     `Saved: ${(title || url || '').slice(0, 300)}`,
+    is_bookmark: false,
+    is_archived: false,
+  };
+  const response = await fetch(
+    buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}`),
+    {
+      method:  'POST',
+      headers: { ...await getHeaders(), 'Prefer': 'return=representation' },
+      body:    JSON.stringify(body),
+    }
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || `Save failed (${response.status})`);
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data[0] : data;
+}
+
 // ── Bookmark API ───────────────────────────────────────────────────────────────
 
 export async function getBookmarks(userId, filter = 'unread') {
