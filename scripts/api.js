@@ -224,6 +224,7 @@ export async function saveWebPage(userId, title, url) {
   const body = {
     user_id:     userId,
     title:       (title || url || 'Untitled Page').trim().slice(0, 500),
+    url:         url || `braintube://extension/${Date.now()}`, // NOT NULL in schema
     source_url:  url || null,
     source_type: 'web',
     summary:     `Saved: ${(title || url || '').slice(0, 300)}`,
@@ -261,6 +262,7 @@ export async function saveBookmark(userId, title, url, tags = []) {
   const body = {
     user_id:       userId,
     title:         (title || 'Untitled Bookmark').trim().slice(0, 500),
+    url:           url || `braintube://extension/${Date.now()}`, // NOT NULL in schema
     source_url:    url || null,
     source_type:   'bookmark',
     summary:       `Bookmarked: ${(title || url || '').slice(0, 300)}`,

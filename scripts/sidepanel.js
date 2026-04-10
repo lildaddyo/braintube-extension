@@ -235,11 +235,62 @@ async function sendChat() {
   }
 }
 
+// Convert a subset of markdown to safe HTML for assistant chat bubbles.
+// User messages stay as plain text (textContent) to prevent XSS.
+function renderMarkdown(raw) {
+  // 1. Escape HTML entities so user-supplied chars can't break the markup.
+  const esc = s => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // 2. Apply inline styles (bold, italic, code) to an already-escaped line.
+  const inline = s => s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+    .replace(/`(.+?)`/g,       '<code>$1</code>');
+
+  const lines  = raw.split('\n');
+  const parts  = [];
+  let inList   = false;
+
+  for (const line of lines) {
+    const e = esc(line);
+
+    if (/^### /.test(line)) {
+      if (inList) { parts.push('</ul>'); inList = false; }
+      parts.push(`<h4>${inline(e.slice(4))}</h4>`);
+    } else if (/^## /.test(line)) {
+      if (inList) { parts.push('</ul>'); inList = false; }
+      parts.push(`<h3>${inline(e.slice(3))}</h3>`);
+    } else if (/^# /.test(line)) {
+      if (inList) { parts.push('</ul>'); inList = false; }
+      parts.push(`<h2>${inline(e.slice(2))}</h2>`);
+    } else if (/^[-*] /.test(line)) {
+      if (!inList) { parts.push('<ul>'); inList = true; }
+      parts.push(`<li>${inline(e.slice(2))}</li>`);
+    } else if (line.trim() === '') {
+      if (inList) { parts.push('</ul>'); inList = false; }
+      parts.push('<br>');
+    } else {
+      if (inList) { parts.push('</ul>'); inList = false; }
+      parts.push(`<span>${inline(e)}</span><br>`);
+    }
+  }
+  if (inList) parts.push('</ul>');
+  return parts.join('');
+}
+
 function addMessage(role, text, id) {
   const msgEl = document.createElement('div');
   msgEl.className = `message ${role}`;
   if (id) msgEl.id = id;
-  msgEl.textContent = text;
+  if (role === 'assistant') {
+    // Render markdown for AI responses; user messages stay as plain text.
+    msgEl.innerHTML = renderMarkdown(text);
+  } else {
+    msgEl.textContent = text;
+  }
   chatMessages.appendChild(msgEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
