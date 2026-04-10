@@ -1,6 +1,7 @@
 // BrainTube Extension - Side Panel
 import { getSession, getCurrentUser } from './auth.js';
-import { getItem, getTranscriptSegments, getHighlights, generateSummary, chat, trackEvent } from './api.js';
+import { getItem, getTranscriptSegments, getHighlights, generateSummary, chat, trackEvent,
+         getBookmarks, saveBookmark, patchItem } from './api.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
 
@@ -21,6 +22,8 @@ const transcriptContent = document.getElementById('transcript-content');
 const highlightsContent = document.getElementById('highlights-content');
 
 let currentItem = null;
+let currentUser = null;
+let currentBookmarkFilter = 'unread';
 
 // Initialize
 async function init() {
@@ -39,8 +42,9 @@ async function init() {
       return;
     }
     
-    const user = await getCurrentUser();
-    currentItem = await getItem(videoInfo.videoId, user.id);
+    currentUser = await getCurrentUser();
+    loadBookmarks('unread');
+    currentItem = await getItem(videoInfo.videoId, currentUser.id);
     
     if (!currentItem) {
       showEmpty();
@@ -263,3 +267,174 @@ chatInput.addEventListener('keypress', (e) => {
 
 // Initialize
 init();
+
+// ── Bookmarks ─────────────────────────────────────────────────────────────────
+
+function bmTimeAgo(isoDate) {
+  if (!isoDate) return '';
+  const ms = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 2)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(isoDate).toLocaleDateString();
+}
+
+function bmDomain(url) {
+  if (!url) return '';
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadBookmarks(filter) {
+  if (!currentUser) return;
+  currentBookmarkFilter = filter;
+  const list = document.getElementById('bookmarks-list');
+  if (!list) return;
+  list.innerHTML = '<div class="bookmarks-empty">Loading…</div>';
+  try {
+    const items = await getBookmarks(currentUser.id, filter);
+    renderBookmarks(items);
+  } catch (err) {
+    console.error('loadBookmarks error:', err);
+    list.innerHTML = '<div class="bookmarks-empty">Failed to load bookmarks.</div>';
+  }
+}
+
+function renderBookmarks(items) {
+  const list = document.getElementById('bookmarks-list');
+  if (!list) return;
+  if (!items.length) {
+    const labels = { unread: 'unread bookmarks', read: 'read bookmarks', all: 'bookmarks' };
+    list.innerHTML = `<div class="bookmarks-empty">No ${labels[currentBookmarkFilter] || 'bookmarks'} yet.<br>Save pages for later using the button above.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(b => {
+    const domain = bmDomain(b.source_url);
+    const tags   = Array.isArray(b.tags) ? b.tags : [];
+    const when   = bmTimeAgo(b.bookmarked_at || b.created_at);
+    const el     = document.createElement('div');
+    el.className = `bookmark-item${b.is_read ? ' bm-item-read' : ''}`;
+    el.dataset.id = b.id;
+    el.innerHTML = `
+      <img class="bookmark-favicon"
+           src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain||'example.com')}&sz=16"
+           alt="" onerror="this.style.display='none'">
+      <div class="bookmark-body">
+        <div class="bookmark-title" title="${escHtml(b.title)}">${escHtml(b.title)}</div>
+        ${domain ? `<div class="bookmark-domain">${escHtml(domain)}</div>` : ''}
+        ${tags.length ? `<div class="bookmark-tags-row">${tags.map(t=>`<span class="tag-pill">${escHtml(t)}</span>`).join('')}</div>` : ''}
+        ${when ? `<div class="bookmark-time">${when}</div>` : ''}
+      </div>
+      <div class="bookmark-actions">
+        <button class="bm-action-btn bm-read-btn" title="${b.is_read?'Mark unread':'Mark as read'}">${b.is_read?'↩':'✓'}</button>
+        <button class="bm-action-btn bm-remove-btn" title="Remove bookmark">×</button>
+      </div>`;
+
+    el.querySelector('.bookmark-title').addEventListener('click', () => {
+      if (b.source_url) chrome.tabs.create({ url: b.source_url });
+    });
+
+    el.querySelector('.bm-read-btn').addEventListener('click', async e => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const newRead = !b.is_read;
+        await patchItem(b.id, { is_read: newRead });
+        b.is_read = newRead;
+        btn.textContent = newRead ? '↩' : '✓';
+        btn.title = newRead ? 'Mark unread' : 'Mark as read';
+        el.classList.toggle('bm-item-read', newRead);
+        if (currentBookmarkFilter !== 'all') {
+          el.style.transition = 'opacity 0.2s';
+          el.style.opacity = '0';
+          setTimeout(() => { el.remove(); bmCheckEmpty(); }, 220);
+        }
+      } catch (err) { console.error('patchItem error:', err); }
+      finally { btn.disabled = false; }
+    });
+
+    el.querySelector('.bm-remove-btn').addEventListener('click', async e => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        await patchItem(b.id, { is_bookmark: false, bookmarked_at: null });
+        el.style.transition = 'opacity 0.2s';
+        el.style.opacity = '0';
+        setTimeout(() => { el.remove(); bmCheckEmpty(); }, 220);
+      } catch (err) { console.error('patchItem error:', err); btn.disabled = false; }
+    });
+
+    list.appendChild(el);
+  });
+}
+
+function bmCheckEmpty() {
+  const list = document.getElementById('bookmarks-list');
+  if (list && !list.querySelectorAll('.bookmark-item').length) loadBookmarks(currentBookmarkFilter);
+}
+
+async function bmSaveCurrentPage() {
+  const btn = document.getElementById('bookmark-this-page');
+  if (!currentUser) { btn.textContent = '⚠️ Sign in first'; return; }
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url   = tab?.url || '';
+    const title = tab?.title?.replace(/ [-–|].*$/, '').trim() || url;
+    const rawTags = (document.getElementById('bookmark-tags-input')?.value || '');
+    const tags = rawTags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+    await saveBookmark(currentUser.id, title, url, tags);
+    if (document.getElementById('bookmark-tags-input')) document.getElementById('bookmark-tags-input').value = '';
+    btn.textContent = '✅ Saved!';
+    setTimeout(() => { btn.textContent = '🔖 Bookmark this page'; btn.disabled = false; }, 1800);
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    const unreadPill = document.querySelector('.filter-pill[data-filter="unread"]');
+    if (unreadPill) unreadPill.classList.add('active');
+    loadBookmarks('unread');
+  } catch (err) {
+    console.error('saveBookmark error:', err);
+    btn.textContent = '❌ Failed — try again';
+    btn.disabled = false;
+  }
+}
+
+// Bookmark tab button click — show the tab even in empty state
+document.querySelectorAll('.tab').forEach(tab => {
+  if (tab.dataset.tab === 'bookmarks') {
+    tab.addEventListener('click', () => {
+      // hide empty/loading overlays so bookmark list shows through
+      document.getElementById('empty').style.display  = 'none';
+      document.getElementById('loading').style.display = 'none';
+      // show the bookmarks content directly
+      document.querySelectorAll('.tab-content').forEach(tc => {
+        tc.style.display = tc.id === 'tab-bookmarks' ? '' : 'none';
+        tc.classList.remove('active');
+      });
+      document.getElementById('tab-bookmarks').classList.add('active');
+    });
+  }
+});
+
+// Filter pills
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    loadBookmarks(pill.dataset.filter);
+  });
+});
+
+// Bookmark save button
+const bmSaveBtn = document.getElementById('bookmark-this-page');
+if (bmSaveBtn) bmSaveBtn.addEventListener('click', bmSaveCurrentPage);

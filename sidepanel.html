@@ -17,6 +17,7 @@
     <button class="tab" data-tab="summary">📝 Summary</button>
     <button class="tab" data-tab="transcript">📄 Transcript</button>
     <button class="tab" data-tab="highlights">✨ Highlights</button>
+    <button class="tab" data-tab="bookmarks">🔖 Saved</button>
   </div>
   
   <div id="loading" class="loading">
@@ -53,6 +54,20 @@
     <div id="highlights-content"></div>
   </div>
   
+  <!-- Bookmarks Tab -->
+  <div id="tab-bookmarks" class="tab-content">
+    <div class="bookmark-save-bar">
+      <input type="text" id="bookmark-tags-input" placeholder="Tags (comma-separated, optional)" class="bookmark-tags-field">
+      <button id="bookmark-this-page" class="btn-primary bookmark-save-btn">🔖 Bookmark this page</button>
+    </div>
+    <div class="filter-pills">
+      <button class="filter-pill active" data-filter="unread">Unread</button>
+      <button class="filter-pill" data-filter="read">Read</button>
+      <button class="filter-pill" data-filter="all">All</button>
+    </div>
+    <div id="bookmarks-list"></div>
+  </div>
+
   <script src="scripts/sidepanel.js" type="module"></script>
 </body>
 </html>

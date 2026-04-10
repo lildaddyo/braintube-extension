@@ -217,6 +217,54 @@ export async function getHighlights(itemId) {
   return await response.json();
 }
 
+// ── Bookmark API ───────────────────────────────────────────────────────────────
+
+export async function getBookmarks(userId, filter = 'unread') {
+  let query = `${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}?user_id=eq.${userId}&is_bookmark=eq.true&is_archived=eq.false&order=bookmarked_at.desc&select=id,title,source_url,source_type,tags,is_read,bookmarked_at,created_at&limit=50`;
+  if (filter === 'unread') query += '&is_read=eq.false';
+  if (filter === 'read')   query += '&is_read=eq.true';
+  const response = await fetch(buildUrl(query), { headers: await getHeaders() });
+  if (!response.ok) return [];
+  return await response.json();
+}
+
+export async function saveBookmark(userId, title, url, tags = []) {
+  const body = {
+    user_id:       userId,
+    title:         (title || 'Untitled Bookmark').trim().slice(0, 500),
+    source_url:    url || null,
+    source_type:   'bookmark',
+    summary:       `Bookmarked: ${(title || url || '').slice(0, 300)}`,
+    is_bookmark:   true,
+    bookmarked_at: new Date().toISOString(),
+    is_archived:   false,
+  };
+  if (tags.length > 0) body.tags = tags;
+  const response = await fetch(
+    buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}`),
+    { method: 'POST', headers: { ...await getHeaders(), 'Prefer': 'return=representation' }, body: JSON.stringify(body) }
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || `Save failed (${response.status})`);
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data[0] : data;
+}
+
+export async function patchItem(itemId, updates) {
+  const response = await fetch(
+    buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}?id=eq.${itemId}`),
+    { method: 'PATCH', headers: { ...await getHeaders(), 'Prefer': 'return=representation' }, body: JSON.stringify(updates) }
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || `Patch failed (${response.status})`);
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data[0] : data;
+}
+
 export async function createHighlight(itemId, userId, text, segmentId = null) {
   const response = await fetch(
     buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.HIGHLIGHTS}`),
