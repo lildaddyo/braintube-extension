@@ -111,9 +111,19 @@ url.searchParams.set('redirect_uri',  redirectUri);
         await chrome.storage.local.set({ bt_session: session, session: session });
         console.log('✅ Signed in:', data.user?.email);
 
-        // Session saved — close immediately. Popup picks up the session via
-        // storage.onChanged so no delay is needed.
-        window.close();
+        // Session saved — close this tab. window.close() is unreliable for tabs
+        // opened via chrome.tabs.create(); use chrome.tabs.remove() instead.
+        // Popup picks up the session via storage.onChanged automatically.
+        try {
+          const currentTab = await chrome.tabs.getCurrent();
+          if (currentTab?.id != null) {
+            chrome.tabs.remove(currentTab.id);
+          } else {
+            window.close();
+          }
+        } catch {
+          window.close(); // last-resort fallback
+        }
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
