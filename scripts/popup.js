@@ -176,35 +176,47 @@ async function handleSaveConversation(tabId, platform) {
   const btn    = document.getElementById('save-conversation-btn');
   const status = document.getElementById('ai-save-status');
 
-  btn.disabled     = true;
-  btn.textContent  = '⏳ Saving…';
+  btn.disabled       = true;
+  btn.textContent    = '⏳ Saving…';
   status.textContent = 'Summarising on BrainTube server…';
 
-  const resp = await chrome.runtime.sendMessage({
-    type: 'SAVE_AI_CONVERSATION',
-    tabId,
-    platform,
-  });
+  try {
+    const resp = await chrome.runtime.sendMessage({
+      type: 'SAVE_AI_CONVERSATION',
+      tabId,
+      platform,
+    });
 
-  if (resp?.ok) {
-    btn.textContent = '✅ Saved!';
-    if (resp.fallback) {
-      // Content script couldn't extract text — URL + title saved as reference.
-      status.textContent = resp.title
-        ? `"${resp.title}" saved (reload the page and try again to capture full text)`
-        : 'URL saved to BrainTube';
+    if (resp?.ok) {
+      btn.textContent = '✅ Saved!';
+      if (resp.fallback) {
+        // Content script couldn't extract text — URL + title saved as reference.
+        status.textContent = resp.title
+          ? `"${resp.title}" saved (reload the page and try again to capture full text)`
+          : 'URL saved to BrainTube';
+      } else {
+        status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+      }
     } else {
-      status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+      const msg = resp?.error ?? '';
+      if (msg === 'NOT_LOGGED_IN') {
+        status.textContent = 'Sign in to BrainTube first ↑';
+      } else if (msg === 'SESSION_EXPIRED') {
+        status.textContent = 'Session expired — sign out and back in';
+      } else {
+        // Never surface raw Chrome internal error strings (e.g. "Could not
+        // establish connection. Receiving end does not exist."). Show a
+        // generic retry prompt instead.
+        status.textContent = 'Save failed — please try again';
+      }
+      btn.disabled    = false;
+      btn.textContent = '💾 Save Conversation';
     }
-  } else {
-    const msg = resp?.error ?? 'Unknown error';
-    if (msg === 'NOT_LOGGED_IN') {
-      status.textContent = 'Sign in to BrainTube first ↑';
-    } else if (msg === 'SESSION_EXPIRED') {
-      status.textContent = 'Session expired — sign out and back in';
-    } else {
-      status.textContent = `Error: ${msg}`;
-    }
+  } catch (err) {
+    // chrome.runtime.sendMessage can throw when the service worker is not yet
+    // active. Hide the raw technical message from the user.
+    console.error('[BrainTube] handleSaveConversation error:', err);
+    status.textContent = 'Save failed — please try again';
     btn.disabled    = false;
     btn.textContent = '💾 Save Conversation';
   }
