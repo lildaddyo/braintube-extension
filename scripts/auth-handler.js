@@ -36,10 +36,20 @@ async function runGoogleAuth() {
   console.log('[BrainTube] auth-handler redirect_uri:', redirectUri);
   console.log('[BrainTube] extension id:', chrome.runtime.id);
 
-  // Use a plain random nonce — crypto.randomUUID() is available in extension
-  // contexts. The same value is sent to Google (as the nonce claim in the
-  // id_token) and to Supabase (so it can verify the claim).
-  const nonce = crypto.randomUUID();
+  // Nonce handling — Supabase's grant_type=id_token verification works like this:
+  //   1. We generate a raw random nonce.
+  //   2. We SHA-256 hash it and send the HASH to Google as the nonce param.
+  //   3. Google embeds the hashed nonce in the id_token JWT's `nonce` claim.
+  //   4. We send the RAW nonce to Supabase in the token exchange body.
+  //   5. Supabase hashes the raw nonce and compares it to the JWT claim → match.
+  // Sending the same plain value to both sides breaks step 5 ("Nonces mismatch").
+  const rawNonce = crypto.randomUUID();
+
+  const encoder    = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(rawNonce));
+  const hashedNonce = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
   // Build the Google OAuth URL directly. Using accounts.google.com bypasses
   // Supabase's /auth/v1/authorize endpoint entirely, which is what causes the
@@ -51,7 +61,7 @@ async function runGoogleAuth() {
   url.searchParams.set('response_type', 'id_token');
   url.searchParams.set('redirect_uri',  redirectUri);
   url.searchParams.set('scope',         'openid email profile');
-  url.searchParams.set('nonce',         nonce);
+  url.searchParams.set('nonce',         hashedNonce); // hashed → Google embeds in JWT
 
   console.log('[BrainTube] Google OAuth URL (no secret):', url.origin + url.pathname + '?client_id=...&response_type=id_token&redirect_uri=' + redirectUri);
   setStatus('Waiting for Google sign-in…');
@@ -103,7 +113,7 @@ async function runGoogleAuth() {
             body: JSON.stringify({
               provider:  'google',
               id_token:  idToken,
-              nonce:     nonce,
+              nonce:     rawNonce, // raw nonce — Supabase hashes this and checks against JWT claim
             }),
           }
         );
