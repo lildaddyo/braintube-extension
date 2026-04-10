@@ -1,11 +1,18 @@
 // BrainTube - Google OAuth handler
 // Runs inside auth.html (a persistent tab) so it survives popup close.
-// Flow: launchWebAuthFlow → Supabase authorize (skip_http_redirect) →
-//       parse access_token from redirect URL → save bt_session → close tab.
-//       Popup picks up session via storage.onChanged.
+//
+// Flow:
+//   1. Build Google OAuth URL directly (accounts.google.com) — bypasses
+//      Supabase's /auth/v1/authorize which 302s to brain-tube.com.
+//   2. launchWebAuthFlow → Google login → redirect back with id_token in hash.
+//   3. Exchange id_token with Supabase /auth/v1/token?grant_type=id_token.
+//   4. Save bt_session to chrome.storage.local.
+//   5. Close this tab via chrome.tabs.remove (window.close unreliable here).
+//   Popup detects session via chrome.storage.onChanged — no new tabs opened.
 
 const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE';
+const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
 
 const statusEl  = document.getElementById('status');
 const spinnerEl = document.getElementById('spinner');
@@ -19,26 +26,34 @@ function setStatus(msg, isError = false) {
 }
 
 async function runGoogleAuth() {
-  // getRedirectURL('auth') appends /auth to the extension's chromiumapp.org base
-  // URL — required for the skip_http_redirect flow so Supabase routes the token
-  // response back to launchWebAuthFlow correctly.
-  const redirectUri = chrome.identity.getRedirectURL('auth');
+  // chrome.identity.getRedirectURL() (no suffix) returns the canonical
+  // chromiumapp.org URL that Chrome registers as the OAuth redirect for this
+  // extension. This must match exactly what is registered in:
+  //   Google Cloud Console → OAuth 2.0 Client → Authorized redirect URIs
+  //   Supabase Dashboard → Auth → Providers → Google → Authorized Client IDs
+  const redirectUri = chrome.identity.getRedirectURL();
 
   console.log('[BrainTube] auth-handler redirect_uri:', redirectUri);
   console.log('[BrainTube] extension id:', chrome.runtime.id);
 
-  // Use Supabase's OAuth authorize endpoint with skip_http_redirect=true.
-  // Without skip_http_redirect, Supabase does a server-side 302 to the
-  // configured site URL (brain-tube.com) with tokens appended — that's the
-  // redirect bug. With skip_http_redirect=true, Supabase redirects the browser
-  // directly to redirect_to with tokens in the URL fragment, which
-  // launchWebAuthFlow captures without ever opening brain-tube.com.
-  const url = new URL(`${SUPABASE_URL}/auth/v1/authorize`);
-  url.searchParams.set('provider',           'google');
-  url.searchParams.set('redirect_to',        redirectUri);
-  url.searchParams.set('skip_http_redirect', 'true');
+  // Use a plain random nonce — crypto.randomUUID() is available in extension
+  // contexts. The same value is sent to Google (as the nonce claim in the
+  // id_token) and to Supabase (so it can verify the claim).
+  const nonce = crypto.randomUUID();
 
-  console.log('[BrainTube] Supabase authorize URL:', url.href);
+  // Build the Google OAuth URL directly. Using accounts.google.com bypasses
+  // Supabase's /auth/v1/authorize endpoint entirely, which is what causes the
+  // 302 redirect to brain-tube.com. Google returns the id_token directly in
+  // the redirect URL hash — launchWebAuthFlow captures it without any browser
+  // tab ever navigating to brain-tube.com.
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
+  url.searchParams.set('response_type', 'id_token');
+  url.searchParams.set('redirect_uri',  redirectUri);
+  url.searchParams.set('scope',         'openid email profile');
+  url.searchParams.set('nonce',         nonce);
+
+  console.log('[BrainTube] Google OAuth URL (no secret):', url.origin + url.pathname + '?client_id=...&response_type=id_token&redirect_uri=' + redirectUri);
   setStatus('Waiting for Google sign-in…');
 
   chrome.identity.launchWebAuthFlow(
@@ -52,69 +67,71 @@ async function runGoogleAuth() {
       }
 
       console.log('[BrainTube] Full redirect URL:', redirectedTo);
-      console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1]  ?? 'none');
-      console.log('[BrainTube] Search:', redirectedTo.split('?')[1]  ?? 'none');
+      console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1] ?? 'none');
+      console.log('[BrainTube] Search:', redirectedTo.split('?')[1] ?? 'none');
 
-      // Parse tokens — try hash fragment first, fall back to query params.
-      // Supabase returns tokens in the hash when skip_http_redirect=true,
-      // but some versions / configurations use query params instead.
-      const hashString  = redirectedTo.split('#')[1] || '';
-      const hashParams  = new URLSearchParams(hashString);
+      // Google returns id_token in the URL hash fragment.
+      // Do NOT use new URL().hash — it keeps the leading '#', which makes the
+      // first key "#id_token" instead of "id_token", breaking the lookup.
+      const hashString = redirectedTo.split('#')[1] || '';
+      const params     = new URLSearchParams(hashString);
+      const idToken    = params.get('id_token');
 
-      // Strip any trailing hash before splitting on '?' to avoid carrying it
-      const queryString = (redirectedTo.split('?')[1] || '').split('#')[0];
-      const queryParams = new URLSearchParams(queryString);
+      console.log('[BrainTube] id_token extracted:', idToken ? idToken.substring(0, 20) + '...' : 'NOT FOUND');
 
-      const accessToken  = hashParams.get('access_token')  || queryParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-      const expiresIn    = hashParams.get('expires_in')    || queryParams.get('expires_in');
-
-      console.log('[BrainTube] access_token extracted:', accessToken ? accessToken.substring(0, 20) + '...' : 'NOT FOUND');
-
-      if (!accessToken) {
-        const err = hashParams.get('error') || queryParams.get('error') || 'access_token not found in redirect';
-        console.error('[BrainTube] Could not extract access_token. hashString:', hashString, 'queryString:', queryString);
-        setStatus(`Could not extract access_token from redirect: ${err}`, true);
+      if (!idToken) {
+        const err = params.get('error') ?? 'id_token not found in redirect hash';
+        console.error('[BrainTube] Could not extract id_token. hashString:', hashString);
+        setStatus(`Sign-in failed: ${err}`, true);
         return;
       }
 
       setStatus('Signing in to BrainTube…');
 
       try {
-        // Fetch the user record for this token from Supabase
-        const userRes = await fetch(
-          `${SUPABASE_URL}/auth/v1/user`,
+        // Exchange the Google id_token for a Supabase session.
+        // This is a direct server-to-server style call — no browser redirect,
+        // no brain-tube.com involvement.
+        const res = await fetch(
+          `${SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
           {
+            method:  'POST',
             headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'apikey':        SUPABASE_ANON,
+              'Content-Type': 'application/json',
+              'apikey':       SUPABASE_ANON,
             },
+            body: JSON.stringify({
+              provider:  'google',
+              id_token:  idToken,
+              nonce:     nonce,
+            }),
           }
         );
 
-        console.log('[BrainTube] User fetch status:', userRes.status);
-        const userData = await userRes.json();
-        console.log('[BrainTube] User:', JSON.stringify(userData));
+        console.log('[BrainTube] Supabase token status:', res.status);
+        const data = await res.json();
+        console.log('[BrainTube] Supabase response keys:', Object.keys(data));
 
-        if (!userRes.ok) {
-          throw new Error(userData.error_description ?? userData.msg ?? `HTTP ${userRes.status}`);
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
         }
 
         const session = {
-          access_token:  accessToken,
-          refresh_token: refreshToken,
-          expires_in:    parseInt(expiresIn ?? '3600', 10),
+          access_token:  data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in:    data.expires_in ?? 3600,
           token_type:    'bearer',
-          user:          userData,
+          user:          data.user,
         };
 
         // Write both keys so getHeaders() in config.js always finds the token
+        // regardless of which code path reads it.
         await chrome.storage.local.set({ bt_session: session, session: session });
-        console.log('✅ Signed in:', userData.email);
+        console.log('✅ Signed in:', data.user?.email);
 
-        // Session saved — close this tab. window.close() is unreliable for tabs
-        // opened via chrome.tabs.create(); use chrome.tabs.remove() instead.
-        // Popup picks up the session via storage.onChanged automatically.
+        // Close this tab. window.close() is unreliable for tabs opened via
+        // chrome.tabs.create() — use chrome.tabs.remove() instead.
+        // Popup detects the session via storage.onChanged automatically.
         try {
           const currentTab = await chrome.tabs.getCurrent();
           if (currentTab?.id != null) {
@@ -128,7 +145,7 @@ async function runGoogleAuth() {
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('[BrainTube] Session setup failed:', msg);
+        console.error('[BrainTube] Token exchange failed:', msg);
         setStatus(`Sign-in failed: ${msg}`, true);
       }
     }
