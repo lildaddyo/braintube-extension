@@ -4,6 +4,10 @@ import { processYouTube, getItem, trackEvent } from './api.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getSession as getStorageSession } from './config.js';
 
+// Google OAuth client ID — must match Google Cloud Console + Supabase provider config.
+// Redirect URI: chrome.identity.getRedirectURL() (no suffix).
+const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
+
 const GOOGLE_BTN_INNER = `
   <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
     <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
@@ -222,6 +226,125 @@ async function handleSignIn() {
   }
 }
 
+// Handle Google sign-in — runs entirely inside the popup.
+// chrome.identity.launchWebAuthFlow opens Chrome's OAuth modal (not a new tab),
+// which auto-closes on completion. The popup stays open throughout.
+// No auth.html tab is created; the user never leaves their current page.
+async function handleGoogleSignIn() {
+  showAuthError('');
+  googleSigninBtn.disabled = true;
+  googleSigninBtn.textContent = '⏳ Opening Google sign-in…';
+
+  try {
+    // chrome.identity.getRedirectURL() returns the canonical chromiumapp.org
+    // URL Chrome passes to launchWebAuthFlow. Must match exactly what is
+    // registered in Google Cloud Console → Authorized redirect URIs.
+    const redirectUri = chrome.identity.getRedirectURL();
+    console.log('[BrainTube] Google OAuth redirect_uri:', redirectUri);
+
+    // Nonce handling:
+    //   rawNonce  → sent to Supabase  (Supabase hashes it and checks JWT claim)
+    //   hashedNonce → sent to Google  (Google embeds it as-is in id_token JWT)
+    const rawNonce    = crypto.randomUUID();
+    const encoder     = new TextEncoder();
+    const hashBuffer  = await crypto.subtle.digest('SHA-256', encoder.encode(rawNonce));
+    const hashedNonce = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Build Google OAuth URL directly — bypasses Supabase's /auth/v1/authorize
+    // endpoint entirely, which is what caused the brain-tube.com 302 redirect.
+    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    authUrl.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
+    authUrl.searchParams.set('response_type', 'id_token');
+    authUrl.searchParams.set('redirect_uri',  redirectUri);
+    authUrl.searchParams.set('scope',         'openid email profile');
+    authUrl.searchParams.set('nonce',         hashedNonce);
+
+    // launchWebAuthFlow opens Chrome's own OAuth modal window.
+    // The popup stays alive during the flow; the modal auto-closes on success.
+    const redirectedTo = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow(
+        { url: authUrl.href, interactive: true },
+        (result) => {
+          if (chrome.runtime.lastError || !result) {
+            reject(new Error(chrome.runtime.lastError?.message ?? 'Sign-in cancelled'));
+          } else {
+            resolve(result);
+          }
+        }
+      );
+    });
+
+    console.log('[BrainTube] Google redirect received');
+
+    // Do NOT use new URL().hash — it keeps the leading '#', making the first
+    // key "#id_token" instead of "id_token" and breaking the lookup.
+    const hashString = redirectedTo.split('#')[1] || '';
+    const params     = new URLSearchParams(hashString);
+    const idToken    = params.get('id_token');
+
+    if (!idToken) {
+      const err = params.get('error') ?? 'id_token not found in redirect hash';
+      console.error('[BrainTube] Could not extract id_token. hash:', hashString);
+      throw new Error(err);
+    }
+
+    googleSigninBtn.textContent = '⏳ Verifying…';
+
+    // Exchange id_token for a Supabase session — pure fetch, no browser redirect.
+    const res = await fetch(
+      `${CONFIG.SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
+      {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey':       CONFIG.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          provider:  'google',
+          id_token:  idToken,
+          nonce:     rawNonce,  // raw nonce — Supabase hashes this and checks JWT claim
+        }),
+      }
+    );
+
+    console.log('[BrainTube] Supabase token status:', res.status);
+    const data = await res.json();
+    console.log('[BrainTube] Supabase response keys:', Object.keys(data));
+
+    if (!res.ok || !data.access_token) {
+      throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
+    }
+
+    const session = {
+      access_token:  data.access_token,
+      refresh_token: data.refresh_token,
+      expires_in:    data.expires_in ?? 3600,
+      token_type:    'bearer',
+      user:          data.user,
+    };
+
+    // Write both keys so getHeaders() in config.js always finds the token.
+    await chrome.storage.local.set({ bt_session: session, session: session });
+    console.log('✅ Google sign-in complete:', data.user?.email);
+
+    // Update popup UI inline — no tab switch, no storage.onChanged needed.
+    await showMainSection(session);
+    await loadCurrentVideo();
+
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[BrainTube] Google sign-in failed:', msg);
+    showAuthError(
+      msg.toLowerCase().includes('cancel') ? 'Sign-in was cancelled' : `Sign-in failed: ${msg}`
+    );
+  } finally {
+    googleSigninBtn.disabled = false;
+    googleSigninBtn.innerHTML = GOOGLE_BTN_INNER;
+  }
+}
+
 // Handle save video
 async function handleSaveVideo() {
   if (!currentVideo) return;
@@ -259,18 +382,15 @@ passwordInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') handleSignIn();
 });
 
-googleSigninBtn.addEventListener('click', () => {
-  // Open auth.html in a new tab — it survives popup close and runs
-  // launchWebAuthFlow to completion, then saves bt_session to storage.
-  chrome.tabs.create({ url: chrome.runtime.getURL('auth.html') });
-});
+// OAuth runs directly in the popup via launchWebAuthFlow — no auth.html tab opened.
+googleSigninBtn.addEventListener('click', handleGoogleSignIn);
 
-// When bt_session appears in storage (set by auth.html on success),
-// reload the popup UI — handles the case where the popup is still open
-// or was re-opened by the user after completing sign-in.
+// Fallback: if bt_session is set by another code path (e.g. a future background
+// flow), update the popup UI. Not triggered by the Google sign-in above since
+// that path calls showMainSection() directly after the token exchange.
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.bt_session?.newValue) {
-    console.log('[BrainTube] popup: bt_session set — updating UI (no tabs will be opened)');
+    console.log('[BrainTube] popup: bt_session set externally — updating UI');
     showMainSection(changes.bt_session.newValue).then(() => loadCurrentVideo());
   }
 });
