@@ -187,8 +187,15 @@ async function handleSaveConversation(tabId, platform) {
   });
 
   if (resp?.ok) {
-    btn.textContent    = '✅ Saved!';
-    status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+    btn.textContent = '✅ Saved!';
+    if (resp.fallback) {
+      // Content script couldn't extract text — URL + title saved as reference.
+      status.textContent = resp.title
+        ? `"${resp.title}" saved (reload the page and try again to capture full text)`
+        : 'URL saved to BrainTube';
+    } else {
+      status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+    }
   } else {
     const msg = resp?.error ?? 'Unknown error';
     if (msg === 'NOT_LOGGED_IN') {
