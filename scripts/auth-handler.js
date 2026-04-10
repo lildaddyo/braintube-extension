@@ -1,7 +1,8 @@
 // BrainTube - Google OAuth handler
 // Runs inside auth.html (a persistent tab) so it survives popup close.
-// Flow: launchWebAuthFlow → parse id_token from hash → exchange with Supabase →
-//       save bt_session → close tab. Popup picks up session via storage.onChanged.
+// Flow: launchWebAuthFlow → Supabase authorize (skip_http_redirect) →
+//       parse access_token from redirect URL → save bt_session → close tab.
+//       Popup picks up session via storage.onChanged.
 
 const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE';
@@ -18,32 +19,26 @@ function setStatus(msg, isError = false) {
 }
 
 async function runGoogleAuth() {
-  const manifest    = chrome.runtime.getManifest();
-  // Use chrome.identity.getRedirectURL() — the authoritative URL Chrome passes
-  // to launchWebAuthFlow. Must match exactly what's registered in Google Console.
-  const redirectUri = chrome.identity.getRedirectURL();
+  // getRedirectURL('auth') appends /auth to the extension's chromiumapp.org base
+  // URL — required for the skip_http_redirect flow so Supabase routes the token
+  // response back to launchWebAuthFlow correctly.
+  const redirectUri = chrome.identity.getRedirectURL('auth');
 
   console.log('[BrainTube] auth-handler redirect_uri:', redirectUri);
   console.log('[BrainTube] extension id:', chrome.runtime.id);
 
-  const url = new URL('https://accounts.google.com/o/oauth2/auth');
-  url.searchParams.set('client_id',     manifest.oauth2.client_id);
-  url.searchParams.set('response_type', 'token id_token');
-url.searchParams.set('redirect_uri',  redirectUri);
-  url.searchParams.set('scope',         manifest.oauth2.scopes.join(' '));
-  // Generate raw nonce
-  const rawNonce = Math.random().toString(36).substring(2);
+  // Use Supabase's OAuth authorize endpoint with skip_http_redirect=true.
+  // Without skip_http_redirect, Supabase does a server-side 302 to the
+  // configured site URL (brain-tube.com) with tokens appended — that's the
+  // redirect bug. With skip_http_redirect=true, Supabase redirects the browser
+  // directly to redirect_to with tokens in the URL fragment, which
+  // launchWebAuthFlow captures without ever opening brain-tube.com.
+  const url = new URL(`${SUPABASE_URL}/auth/v1/authorize`);
+  url.searchParams.set('provider',           'google');
+  url.searchParams.set('redirect_to',        redirectUri);
+  url.searchParams.set('skip_http_redirect', 'true');
 
-  // Hash it for Google
-  const encoder = new TextEncoder();
-  const data = encoder.encode(rawNonce);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // Send hashed nonce to Google, raw nonce to Supabase
-  url.searchParams.set('nonce', hashedNonce);
-
+  console.log('[BrainTube] Supabase authorize URL:', url.href);
   setStatus('Waiting for Google sign-in…');
 
   chrome.identity.launchWebAuthFlow(
@@ -60,56 +55,62 @@ url.searchParams.set('redirect_uri',  redirectUri);
       console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1]  ?? 'none');
       console.log('[BrainTube] Search:', redirectedTo.split('?')[1]  ?? 'none');
 
-      // Split on '#' and pass the raw string directly to URLSearchParams.
-      // Do NOT use new URL().hash — it preserves the leading '#' which makes
-      // the first key "#iss" instead of "iss", breaking all param lookups.
-      const hashString = redirectedTo.split('#')[1] || '';
-      const params     = new URLSearchParams(hashString);
-      const idToken    = params.get('id_token');
+      // Parse tokens — try hash fragment first, fall back to query params.
+      // Supabase returns tokens in the hash when skip_http_redirect=true,
+      // but some versions / configurations use query params instead.
+      const hashString  = redirectedTo.split('#')[1] || '';
+      const hashParams  = new URLSearchParams(hashString);
 
-      console.log('[BrainTube] id_token extracted:', idToken ? idToken.substring(0, 20) + '...' : 'NOT FOUND');
+      // Strip any trailing hash before splitting on '?' to avoid carrying it
+      const queryString = (redirectedTo.split('?')[1] || '').split('#')[0];
+      const queryParams = new URLSearchParams(queryString);
 
-      if (!idToken) {
-        const err = params.get('error') ?? 'id_token not found in redirect hash';
-        console.error('[BrainTube] Could not extract id_token. hashString:', hashString);
-        setStatus(`Could not extract id_token from redirect: ${err}`, true);
+      const accessToken  = hashParams.get('access_token')  || queryParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+      const expiresIn    = hashParams.get('expires_in')    || queryParams.get('expires_in');
+
+      console.log('[BrainTube] access_token extracted:', accessToken ? accessToken.substring(0, 20) + '...' : 'NOT FOUND');
+
+      if (!accessToken) {
+        const err = hashParams.get('error') || queryParams.get('error') || 'access_token not found in redirect';
+        console.error('[BrainTube] Could not extract access_token. hashString:', hashString, 'queryString:', queryString);
+        setStatus(`Could not extract access_token from redirect: ${err}`, true);
         return;
       }
 
       setStatus('Signing in to BrainTube…');
 
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/auth/v1/token?grant_type=id_token`,
+        // Fetch the user record for this token from Supabase
+        const userRes = await fetch(
+          `${SUPABASE_URL}/auth/v1/user`,
           {
-            method:  'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'apikey':       SUPABASE_ANON,
+              'Authorization': `Bearer ${accessToken}`,
+              'apikey':        SUPABASE_ANON,
             },
-            body: JSON.stringify({ provider: 'google', id_token: idToken, nonce: rawNonce }),
           }
         );
 
-        console.log('[BrainTube] Supabase status:', res.status);
-        const data = await res.json();
-        console.log('[BrainTube] Supabase response:', JSON.stringify(data));
+        console.log('[BrainTube] User fetch status:', userRes.status);
+        const userData = await userRes.json();
+        console.log('[BrainTube] User:', JSON.stringify(userData));
 
-        if (!res.ok || !data.access_token) {
-          throw new Error(data.error_description ?? data.msg ?? `HTTP ${res.status}`);
+        if (!userRes.ok) {
+          throw new Error(userData.error_description ?? userData.msg ?? `HTTP ${userRes.status}`);
         }
 
         const session = {
-          access_token:  data.access_token,
-          refresh_token: data.refresh_token,
-          expires_in:    data.expires_in ?? 3600,
+          access_token:  accessToken,
+          refresh_token: refreshToken,
+          expires_in:    parseInt(expiresIn ?? '3600', 10),
           token_type:    'bearer',
-          user:          data.user,
+          user:          userData,
         };
 
         // Write both keys so getHeaders() in config.js always finds the token
         await chrome.storage.local.set({ bt_session: session, session: session });
-        console.log('✅ Signed in:', data.user?.email);
+        console.log('✅ Signed in:', userData.email);
 
         // Session saved — close this tab. window.close() is unreliable for tabs
         // opened via chrome.tabs.create(); use chrome.tabs.remove() instead.
@@ -127,7 +128,7 @@ url.searchParams.set('redirect_uri',  redirectUri);
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('[BrainTube] Token exchange failed:', msg);
+        console.error('[BrainTube] Session setup failed:', msg);
         setStatus(`Sign-in failed: ${msg}`, true);
       }
     }
