@@ -32,9 +32,13 @@
   
   <!-- Chat Tab -->
   <div id="tab-chat" class="tab-content active">
+    <div class="chat-mode-toggle">
+      <button class="chat-mode-btn active" data-mode="item">📹 This video</button>
+      <button class="chat-mode-btn" data-mode="corpus">🧠 All my knowledge</button>
+    </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-container">
-      <textarea id="chat-input" placeholder="Ask about this video..." rows="2"></textarea>
+      <textarea id="chat-input" placeholder="Ask anything about this video..." rows="2"></textarea>
       <button id="chat-send" class="btn-send">Send</button>
     </div>
   </div>

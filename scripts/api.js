@@ -87,41 +87,8 @@ export async function quickSearch(query, userId) {
   return await response.json();
 }
 
-// AI chat about a video
-// messages: [{ role: 'user'|'assistant', content: string }]
-// videoId: the item UUID (Supabase items.id)
-export async function chat(messages, videoId) {
-  const response = await fetch(
-    buildUrl(CONFIG.ENDPOINTS.CHAT),
-    {
-      method: 'POST',
-      headers: await getHeaders(),
-      body: JSON.stringify({ messages, itemId: videoId })
-    }
-  );
-
-  const contentType = response.headers.get('content-type') || '';
-
-  // Non-OK or non-streaming: read as text for diagnostics
-  if (!response.ok || !contentType.includes('text/event-stream')) {
-    const text = await response.text();
-    console.error('[BrainTube] chat raw response:', text);
-    if (!response.ok) {
-      let msg = `Chat failed (${response.status})`;
-      try { msg = JSON.parse(text).error || msg; } catch { /* not JSON */ }
-      throw new Error(msg);
-    }
-    // 200 OK but not SSE — try JSON fallback then bail
-    try {
-      const data = JSON.parse(text);
-      if (data.error) throw new Error(data.error);
-      return data.reply || data.response || data.message || data.content || text;
-    } catch {
-      throw new Error('Unexpected response from chat service. Please try again.');
-    }
-  }
-
-  // SSE streaming — accumulate delta content chunks
+// Shared SSE reader — accumulates delta content from a streaming response body.
+async function readSseStream(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = '';
@@ -132,22 +99,74 @@ export async function chat(messages, videoId) {
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
-    buffer = lines.pop(); // hold incomplete line for next chunk
+    buffer = lines.pop();
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
       const raw = line.slice(6).trim();
       if (raw === '[DONE]') continue;
       try {
         const chunk = JSON.parse(raw);
-        if (chunk.citations) continue; // citations metadata event — skip
+        if (chunk.citations) continue;
         const delta = chunk.choices?.[0]?.delta?.content;
         if (delta) fullText += delta;
       } catch { /* ignore malformed SSE chunks */ }
     }
   }
 
-  if (!fullText) throw new Error('Chat returned an empty response. Please try again.');
+  if (!fullText) throw new Error('Chat unavailable — please try again in a moment.');
   return fullText;
+}
+
+// Parse a non-streaming response (JSON or plain text).
+async function readJsonOrText(response) {
+  const text = await response.text();
+  console.error('[BrainTube] chat raw response:', text);
+  if (!response.ok) {
+    let msg = 'Chat unavailable — please try again in a moment.';
+    try { msg = JSON.parse(text).error || msg; } catch { /* not JSON */ }
+    throw new Error(msg);
+  }
+  try {
+    const data = JSON.parse(text);
+    if (data.error) throw new Error(data.error);
+    return data.reply || data.response || data.message || data.content || text;
+  } catch {
+    throw new Error('Chat unavailable — please try again in a moment.');
+  }
+}
+
+// Chat about a specific saved video.
+// messages: [{ role: 'user'|'assistant', content: string }]
+// itemId:   Supabase items.id UUID
+export async function chatItem(messages, itemId) {
+  const response = await fetch(
+    buildUrl(CONFIG.ENDPOINTS.ASK_ITEM_AI),
+    {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify({ messages, itemId }),
+    }
+  );
+  const ct = response.headers.get('content-type') || '';
+  if (ct.includes('text/event-stream') && response.ok) return readSseStream(response);
+  return readJsonOrText(response);
+}
+
+// Chat across the user's entire saved corpus.
+// TODO: confirm function slug with Lovable — currently targets CORPUS_CHAT placeholder.
+// messages: [{ role: 'user'|'assistant', content: string }]
+export async function chatCorpus(messages) {
+  const response = await fetch(
+    buildUrl(CONFIG.ENDPOINTS.CORPUS_CHAT),
+    {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify({ messages }),
+    }
+  );
+  const ct = response.headers.get('content-type') || '';
+  if (ct.includes('text/event-stream') && response.ok) return readSseStream(response);
+  return readJsonOrText(response);
 }
 
 // Check subscription status

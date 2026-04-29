@@ -1,10 +1,46 @@
+@font-face {
+  font-family: 'Fraunces';
+  src: url('../fonts/Fraunces-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
+  src: url('../fonts/Fraunces-Bold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
+  src: url('../fonts/Fraunces-Black.woff2') format('woff2');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/SpaceGrotesk-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/SpaceGrotesk-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/SpaceGrotesk-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   background: #f9fafb;
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+h1, h2, h3, .brand-name, .panel-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
 }
 
 .header {
@@ -66,6 +102,44 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* ── Chat mode toggle ──────────────────────────────────────────────────────── */
+
+.chat-mode-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.chat-mode-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 500;
+  color: #6b7280;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.chat-mode-btn.active {
+  background: #667eea;
+  color: white;
+}
+
+.chat-mode-btn:not(.active):hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* ── Chat messages ─────────────────────────────────────────────────────────── */
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -103,6 +177,7 @@ body {
   border: 1px solid #d1d5db;
   border-radius: 8px;
   resize: none;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
 }
 
 .btn-send {
@@ -205,7 +280,7 @@ body {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 12px;
-  font-family: inherit;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   color: #1f2937;
   outline: none;
 }

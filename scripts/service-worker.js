@@ -55,6 +55,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true; // async
   }
+
+  // Playlist-add event — relayed from content-playlist-watcher.js
+  if (message.type === 'PLAYLIST_ADD_EVENT') {
+    syncPlaylist(message.youtube_playlist_id)
+      .then(() => sendResponse({ ok: true }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
 });
 
 // ── AI Conversation Capture ───────────────────────────────────────────────────
@@ -121,6 +129,37 @@ async function saveAiConversation(tabId, platform) {
     throw new Error(err?.error ?? `Server error ${resp.status}`);
   }
   return resp.json();
+}
+
+// ── Playlist sync ─────────────────────────────────────────────────────────────
+
+const SUPABASE_URL       = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
+const SYNC_PLAYLIST_URL  = `${SUPABASE_URL}/functions/v1/youtube-sync-playlist`;
+
+async function syncPlaylist(youtubePlaylistId) {
+  if (!youtubePlaylistId) return;
+
+  const stored = await chrome.storage.local.get(['session', 'bt_session']);
+  const token  = (stored.bt_session || stored.session)?.access_token;
+  if (!token) {
+    console.log('[BrainTube] syncPlaylist: not logged in, skipping');
+    return;
+  }
+
+  const resp = await fetch(SYNC_PLAYLIST_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ playlist_id: youtubePlaylistId }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error ?? `Sync failed ${resp.status}`);
+  }
+  console.log('[BrainTube] playlist sync queued:', youtubePlaylistId);
 }
 
 // Tab updates - update badge

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BrainTube - YouTube Knowledge Base",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAplZZ1KBlmEJe4lwlX0PvUID8+S/IOD6L9kkY1veeiFoRLMrpKeLdUNzvQMfJp1BdYih336fs9e+j7EOoUZHGofbeVQLdMwdsHRW01kAbSEghCcvgPqWs3jpsIVfBFZTjQIFCRJWlfIoXv/R/NjZjcckEQjyEvx/2v30VO6Vl2gk9iKbr5qehyv3euKHkbAsr2pYlRuAlpXr0VlH8gT2Dc7XykIeQTCBsL+SqCYWqUb12r6ljzB9Uhxfwt616t8KojHMjtxweRAag3X5Lw5qdu8p2lEltldT/rDHHVDZiMuujniFWMPqyWO7tfMl4RiDeYdNW1dotN69eM3sctVL3EQIDAQAB",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Save YouTube videos, get AI summaries, and search your knowledge base.",
   "permissions": [
     "activeTab",
@@ -16,11 +16,15 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://youtube.com/*",
-    "https://pmwuwzoqnhqqqseddzes.supabase.co/*",
+    "https://iqjnmmtvhyavgrsxpoao.supabase.co/*",
+    "https://*.supabase.co/*",
     "https://claude.ai/*",
     "https://chatgpt.com/*",
     "https://braintube-mcp-production.up.railway.app/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://braintube-mcp-production.up.railway.app https://www.youtube.com https://*.youtube.com"
+  },
   "background": {
     "service_worker": "scripts/service-worker.js",
     "type": "module"
@@ -45,6 +49,17 @@
       "matches": ["https://claude.ai/*", "https://chatgpt.com/*"],
       "js": ["scripts/ai-capture.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["scripts/page-world-shim.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["scripts/content-playlist-watcher.js"],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {
@@ -63,7 +78,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["icons/*"],
+      "resources": ["icons/*", "scripts/page-world-shim.js"],
       "matches": ["*://www.youtube.com/*", "https://claude.ai/*", "https://chatgpt.com/*"]
     }
   ]

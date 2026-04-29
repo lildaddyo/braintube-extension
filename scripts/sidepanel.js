@@ -1,6 +1,6 @@
 // BrainTube Extension - Side Panel
 import { getSession, getCurrentUser } from './auth.js';
-import { getItem, getTranscriptSegments, getHighlights, generateSummary, chat, trackEvent,
+import { getItem, getTranscriptSegments, getHighlights, generateSummary, chatItem, chatCorpus, trackEvent,
          getBookmarks, saveBookmark, patchItem } from './api.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
@@ -185,12 +185,64 @@ async function loadHighlights() {
 // Conversation history for multi-turn context
 let conversationHistory = [];
 
-// Initialize chat
-function initChat() {
-  conversationHistory = [];
-  addMessage('assistant', '👋 Hi! Ask me anything about this video!');
+// ── Chat mode toggle (item vs corpus) ────────────────────────────────────────
 
-  if (currentItem.status !== CONFIG.STATUS.INDEXED) {
+const CHAT_MODE_KEY = 'bt_chat_mode';
+
+async function getChatMode() {
+  try {
+    const s = await chrome.storage.session.get(CHAT_MODE_KEY);
+    return s[CHAT_MODE_KEY] || 'item';
+  } catch {
+    return 'item';
+  }
+}
+
+async function setChatMode(mode) {
+  try { await chrome.storage.session.set({ [CHAT_MODE_KEY]: mode }); } catch { /* ignore */ }
+}
+
+function applyToggleUI(mode) {
+  document.querySelectorAll('.chat-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  chatInput.placeholder = mode === 'item'
+    ? 'Ask anything about this video...'
+    : 'Ask across everything you\'ve saved...';
+}
+
+document.querySelectorAll('.chat-mode-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const mode = btn.dataset.mode;
+    await setChatMode(mode);
+    applyToggleUI(mode);
+    conversationHistory = []; // new mode = fresh context
+    chatMessages.innerHTML = '';
+    const greeting = mode === 'item'
+      ? '👋 Hi! Ask me anything about this video!'
+      : '🧠 Ask me anything across your entire saved knowledge base!';
+    addMessage('assistant', greeting);
+  });
+});
+
+// Initialize chat
+async function initChat() {
+  conversationHistory = [];
+
+  // Default: item mode when a video is loaded, corpus when no item
+  const defaultMode = currentItem ? 'item' : 'corpus';
+  const storedMode  = await getChatMode();
+  const mode        = currentItem ? storedMode : 'corpus';
+
+  await setChatMode(mode);
+  applyToggleUI(mode);
+
+  const greeting = mode === 'item'
+    ? '👋 Hi! Ask me anything about this video!'
+    : '🧠 Ask me anything across your entire saved knowledge base!';
+  addMessage('assistant', greeting);
+
+  if (currentItem && currentItem.status !== CONFIG.STATUS.INDEXED) {
     addMessage('assistant', '⚠️ Note: This video is still processing. Chat will work once it\'s indexed.');
   }
 }
@@ -200,12 +252,13 @@ async function sendChat() {
   const message = chatInput.value.trim();
   if (!message) return;
 
-  if (currentItem.status !== CONFIG.STATUS.INDEXED) {
+  const mode = await getChatMode();
+
+  if (mode === 'item' && currentItem && currentItem.status !== CONFIG.STATUS.INDEXED) {
     addMessage('assistant', '⏳ This video is still processing. Please wait until it\'s indexed before chatting.');
     return;
   }
 
-  // Append user turn to history and UI
   conversationHistory.push({ role: 'user', content: message });
   addMessage('user', message);
   chatInput.value = '';
@@ -215,20 +268,21 @@ async function sendChat() {
   chatSend.disabled = true;
 
   try {
-    // Send full history so the edge function has multi-turn context
-    const reply = await chat(conversationHistory, currentItem.id);
+    let reply;
+    if (mode === 'item' && currentItem) {
+      reply = await chatItem(conversationHistory, currentItem.id);
+    } else {
+      reply = await chatCorpus(conversationHistory);
+    }
 
     document.getElementById(loadingId)?.remove();
     addMessage('assistant', reply);
-
-    // Append assistant turn so next send includes it
     conversationHistory.push({ role: 'assistant', content: reply });
 
-    await trackEvent('extension_chat_message', { item_id: currentItem.id });
+    await trackEvent('extension_chat_message', { item_id: currentItem?.id, mode });
   } catch (error) {
     document.getElementById(loadingId)?.remove();
-    addMessage('assistant', '❌ Failed to get response: ' + error.message);
-    // Remove the failed user turn from history so it can be retried
+    addMessage('assistant', '❌ ' + error.message);
     conversationHistory.pop();
   } finally {
     chatSend.disabled = false;
