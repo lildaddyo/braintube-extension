@@ -1,0 +1,32 @@
+name: Version bump check
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'manifest.json'
+      - 'scripts/**'
+      - 'styles/**'
+      - 'icons/**'
+      - 'fonts/**'
+      - 'fonts/*.woff2'
+      - '*.html'
+      - '*.js'
+      - '.github/workflows/**'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        run: |
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Count files that are NOT in .github/workflows/
+          NON_INFRA=$(echo "$CHANGED" | grep -v '^\.github/workflows/' | grep -v '^\.github/$' | grep -v '^$' | wc
