@@ -2,16 +2,6 @@ name: Version bump check
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'manifest.json'
-      - 'scripts/**'
-      - 'styles/**'
-      - 'icons/**'
-      - 'fonts/**'
-      - 'fonts/*.woff2'
-      - '*.html'
-      - '*.js'
-      - '.github/workflows/**'
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -28,5 +18,9 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          # Count files that are NOT in .github/workflows/
-          NON_INFRA=$(echo "$CHANGED" | grep -v '^\.github/workflows/' | grep -v '^\.github/$' | grep -v '^$' | wc
+          # Define shippable patterns — files that ship in the extension ZIP
+          # and therefore require a version bump when modified.
+          SHIPPABLE=$(echo "$CHANGED" | grep -E '^(manifest\.json|scripts/|styles/|icons/|fonts/|.*\.html$|.*\.js$|_locales/)' || true)
+          SHIPPABLE_COUNT=$(echo "$SHIPPABLE" | grep -v '^$' | wc -l)
+
+          echo "Shippabl
