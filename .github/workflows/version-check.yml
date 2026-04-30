@@ -1,0 +1,53 @@
+name: Version bump check
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        run: |
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Define shippable patterns - files that ship in the extension
+          # ZIP and therefore require a version bump when modified.
+          SHIPPABLE=$(echo "$CHANGED" | grep -E '^(manifest\.json|scripts/|styles/|icons/|fonts/|.*\.html$|.*\.js$|_locales/)' || true)
+
+          if [ -z "$SHIPPABLE" ]; then
+            SHIPPABLE_COUNT=0
+          else
+            SHIPPABLE_COUNT=$(echo "$SHIPPABLE" | wc -l)
+          fi
+
+          echo "Shippable files changed: $SHIPPABLE_COUNT"
+          if [ "$SHIPPABLE_COUNT" -gt 0 ]; then
+            echo "$SHIPPABLE"
+          fi
+
+          if [ "$SHIPPABLE_COUNT" -eq 0 ]; then
+            echo "No shippable code changed - skipping version check"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Shippable code changed - version bump required"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare versions
+        if: steps.changes.outputs.skip == 'false'
+        run: |
+          NEW=$(node -p "require('./manifest.json').version")
+          OLD=$(git show origin/main:manifest.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+          if [ "$NEW" = "$OLD" ]; then
+            echo "::error::Shippable code changed but manifest version not bumped. Old: $OLD, New: $NEW"
+            exit 1
+          fi
+          echo "Version bump OK: $OLD then $NEW"

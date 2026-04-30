@@ -1,0 +1,89 @@
+name: Publish to Chrome Web Store
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/**'
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read manifest version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version $VERSION"
+
+      - name: Build extension ZIP
+        run: |
+          zip -r braintube-extension-v${{ steps.version.outputs.version }}.zip . \
+            -x "*.git*" \
+            -x "node_modules/*" \
+            -x ".github/*" \
+            -x "scripts/strip-bg.js" \
+            -x "*.md" \
+            -x "fonts/*.txt"
+          ls -la *.zip
+
+      - name: Get OAuth access token
+        id: auth
+        run: |
+          TOKEN=$(curl -sS -X POST "https://oauth2.googleapis.com/token" \
+            -d "client_id=${{ secrets.CWS_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.CWS_CLIENT_SECRET }}" \
+            -d "refresh_token=${{ secrets.CWS_REFRESH_TOKEN }}" \
+            -d "grant_type=refresh_token" \
+            | jq -r '.access_token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Failed to get access token"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Upload to Chrome Web Store
+        run: |
+          UPLOAD_RESPONSE=$(curl -sS -X PUT \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -T "braintube-extension-v${{ steps.version.outputs.version }}.zip" \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${{ secrets.CWS_EXTENSION_ID }}")
+          echo "Upload response: $UPLOAD_RESPONSE"
+          STATUS=$(echo "$UPLOAD_RESPONSE" | jq -r '.uploadState')
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "::error::Upload failed: $UPLOAD_RESPONSE"
+            exit 1
+          fi
+
+      - name: Submit for review
+        run: |
+          PUBLISH_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${{ secrets.CWS_EXTENSION_ID }}/publish")
+          echo "Publish response: $PUBLISH_RESPONSE"
+          STATUS=$(echo "$PUBLISH_RESPONSE" | jq -r '.status[]?')
+          if echo "$STATUS" | grep -q "OK"; then
+            echo "Submitted for review successfully"
+          else
+            echo "::warning::Submit response: $PUBLISH_RESPONSE"
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: |
+            Auto-deployed to Chrome Web Store.
+            Wait ~24h for Google review approval.
+            Track status: https://chrome.google.com/webstore/devconsole
+          files: braintube-extension-v${{ steps.version.outputs.version }}.zip

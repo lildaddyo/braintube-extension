@@ -2,6 +2,18 @@
 
 **Built from official specification** - Production-ready Chrome extension for BrainTube.
 
+## Deployment
+
+Pushes to `main` auto-deploy to Chrome Web Store. No manual upload.
+
+To ship a new version:
+
+1. Bump `manifest.json` "version" field
+2. Open PR — version-check workflow validates
+3. Merge — publish workflow uploads + submits for review
+4. Wait ~24h for Google approval
+5. Auto-publishes to all users
+
 ## ✨ What's Included
 
 ### Core Features
