@@ -11,7 +11,8 @@ export const CONFIG = {
     GENERATE_SUMMARY: '/functions/v1/generate-summary',
     QUICK_SEARCH: '/functions/v1/quick-search',
     SEARCH: '/functions/v1/search',
-    CHAT: '/functions/v1/chat',
+    ASK_ITEM_AI: '/functions/v1/ask-item-ai',
+    CORPUS_CHAT: '/functions/v1/ai-router',
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
     TRACK: '/functions/v1/track',
     
