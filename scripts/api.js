@@ -152,8 +152,9 @@ export async function chatItem(messages, itemId) {
   return readJsonOrText(response);
 }
 
-// Chat across the user's entire saved corpus.
-// TODO: confirm function slug with Lovable — currently targets CORPUS_CHAT placeholder.
+// Chat across the user's entire saved corpus via ai-router.
+// ai-router is a thin proxy that resolves the user's personal brain and
+// forwards to brain-chat. Returns buffered JSON — streaming not yet shipped.
 // messages: [{ role: 'user'|'assistant', content: string }]
 export async function chatCorpus(messages) {
   const response = await fetch(
@@ -164,9 +165,14 @@ export async function chatCorpus(messages) {
       body: JSON.stringify({ messages }),
     }
   );
-  const ct = response.headers.get('content-type') || '';
-  if (ct.includes('text/event-stream') && response.ok) return readSseStream(response);
-  return readJsonOrText(response);
+  let data;
+  try { data = await response.json(); } catch { data = {}; }
+  if (!response.ok) {
+    throw new Error(data.error || 'Chat unavailable — please try again in a moment.');
+  }
+  const text = data.reply || data.response || data.message || data.content || '';
+  if (!text) throw new Error('Chat unavailable — please try again in a moment.');
+  return text;
 }
 
 // Check subscription status

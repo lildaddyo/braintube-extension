@@ -12,8 +12,7 @@ export const CONFIG = {
     QUICK_SEARCH: '/functions/v1/quick-search',
     SEARCH: '/functions/v1/search',
     ASK_ITEM_AI: '/functions/v1/ask-item-ai',
-    // TODO: confirm corpus-chat function name with Lovable before enabling
-    CORPUS_CHAT: '/functions/v1/extension-chat',
+    CORPUS_CHAT: '/functions/v1/ai-router',
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
     TRACK: '/functions/v1/track',
     
