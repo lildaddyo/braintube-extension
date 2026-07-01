@@ -2,7 +2,7 @@
 
 export const CONFIG = {
   SUPABASE_URL: 'https://iqjnmmtvhyavgrsxpoao.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE',
+  SUPABASE_ANON_KEY: 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1',
   WEB_APP_URL: 'https://brain-tube.com',
   
   // API Endpoints

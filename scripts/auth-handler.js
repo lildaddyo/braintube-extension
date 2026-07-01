@@ -11,7 +11,7 @@
 //   Popup detects session via chrome.storage.onChanged — no new tabs opened.
 
 const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE';
+const SUPABASE_ANON = 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1';
 const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
 
 const statusEl  = document.getElementById('status');
