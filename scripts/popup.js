@@ -3,6 +3,7 @@ import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
 import { processYouTube, getItem, trackEvent, saveWebPage, saveBookmark } from './api.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getSession as getStorageSession } from './config.js';
+import { IS_FIREFOX } from './compat.js';
 
 // Google OAuth client ID — must match Google Cloud Console + Supabase provider config.
 // Redirect URI: chrome.identity.getRedirectURL() (no suffix).
@@ -258,9 +259,15 @@ async function handleGoogleSignIn() {
 
   try {
     // chrome.identity.getRedirectURL() returns the canonical chromiumapp.org
-    // URL Chrome passes to launchWebAuthFlow. Must match exactly what is
-    // registered in Google Cloud Console → Authorized redirect URIs.
-    const redirectUri = chrome.identity.getRedirectURL();
+    // URL Chrome passes to launchWebAuthFlow. On Firefox, browser.identity
+    // .getRedirectURL() instead returns an extensions.allizom.org URL
+    // derived from browser_specific_settings.gecko.id — a DIFFERENT domain
+    // that must be registered as its own Authorized Redirect URI in Google
+    // Cloud Console before Google sign-in works on Firefox. The console.log
+    // below is the only way to read the real value — see the build report.
+    const redirectUri = IS_FIREFOX
+      ? browser.identity.getRedirectURL()
+      : chrome.identity.getRedirectURL();
     console.log('[BrainTube] Google OAuth redirect_uri:', redirectUri);
 
     // Nonce handling:
@@ -282,20 +289,25 @@ async function handleGoogleSignIn() {
     authUrl.searchParams.set('scope',         'openid email profile');
     authUrl.searchParams.set('nonce',         hashedNonce);
 
-    // launchWebAuthFlow opens Chrome's own OAuth modal window.
+    // launchWebAuthFlow opens the browser's own OAuth modal window.
     // The popup stays alive during the flow; the modal auto-closes on success.
-    const redirectedTo = await new Promise((resolve, reject) => {
-      chrome.identity.launchWebAuthFlow(
-        { url: authUrl.href, interactive: true },
-        (result) => {
-          if (chrome.runtime.lastError || !result) {
-            reject(new Error(chrome.runtime.lastError?.message ?? 'Sign-in cancelled'));
-          } else {
-            resolve(result);
-          }
-        }
-      );
-    });
+    // browser.* is strictly promise-based on Firefox — it does not invoke a
+    // passed callback — so the two APIs need different call shapes, not just
+    // a different object reference.
+    const redirectedTo = IS_FIREFOX
+      ? await browser.identity.launchWebAuthFlow({ url: authUrl.href, interactive: true })
+      : await new Promise((resolve, reject) => {
+          chrome.identity.launchWebAuthFlow(
+            { url: authUrl.href, interactive: true },
+            (result) => {
+              if (chrome.runtime.lastError || !result) {
+                reject(new Error(chrome.runtime.lastError?.message ?? 'Sign-in cancelled'));
+              } else {
+                resolve(result);
+              }
+            }
+          );
+        });
 
     console.log('[BrainTube] Google redirect received');
 
@@ -357,8 +369,12 @@ async function handleGoogleSignIn() {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[BrainTube] Google sign-in failed:', msg);
+    // The email/password form above this button is always visible, never
+    // hidden during a Google attempt — this message just points at it.
     showAuthError(
-      msg.toLowerCase().includes('cancel') ? 'Sign-in was cancelled' : `Sign-in failed: ${msg}`
+      IS_FIREFOX
+        ? `Google sign-in isn't set up for Firefox yet — please sign in with email + password below. (${msg})`
+        : msg.toLowerCase().includes('cancel') ? 'Sign-in was cancelled' : `Sign-in failed: ${msg}`
     );
   } finally {
     googleSigninBtn.disabled = false;
@@ -471,18 +487,32 @@ bookmarkBtn.addEventListener('click', handleBookmark);
 
 viewNoteBtn.addEventListener('click', () => {
   if (currentVideo?.item) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      console.log('[BrainTube] viewNoteBtn tabId:', tabs[0]?.id);
-      if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
-    });
+    if (IS_FIREFOX) {
+      // browser.sidebarAction.open() must run synchronously inside the click
+      // handler to satisfy Firefox's user-gesture requirement — an async
+      // chrome.tabs.query() callback (the Chrome path below) breaks that
+      // chain. sidebarAction is window-scoped, not per-tab, so no tabId
+      // lookup is needed here at all.
+      browser.sidebarAction.open().catch(console.error);
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        console.log('[BrainTube] viewNoteBtn tabId:', tabs[0]?.id);
+        if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
+      });
+    }
   }
 });
 
 aiChatBtn.addEventListener('click', () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    console.log('[BrainTube] aiChatBtn tabId:', tabs[0]?.id);
-    if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
-  });
+  if (IS_FIREFOX) {
+    // See viewNoteBtn handler above for why this must be synchronous.
+    browser.sidebarAction.open().catch(console.error);
+  } else {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      console.log('[BrainTube] aiChatBtn tabId:', tabs[0]?.id);
+      if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
+    });
+  }
 });
 
 openLibraryBtn.addEventListener('click', async (e) => {

@@ -1,6 +1,7 @@
 // BrainTube Extension - Service Worker
 import { trackEvent } from './api.js';
 import { CONFIG } from './config.js';
+import { IS_FIREFOX } from './compat.js';
 
 console.log('🧠 BrainTube service worker started');
 
@@ -40,7 +41,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Open side panel — must be called from service worker with active tabId
   // (popup may close before chrome.sidePanel.open resolves if called directly)
-  if (message.type === 'OPEN_SIDEPANEL') {
+  //
+  // NOTE: nothing in this codebase actually sends OPEN_SIDEPANEL (verified by
+  // grep — this branch is unreachable dead code, same status as auth-handler.js).
+  // It's guarded below rather than ported to Firefox: chrome.sidePanel doesn't
+  // exist on Firefox, and even if this were reachable, relaying the open()
+  // call through an async runtime.onMessage handler can't satisfy Firefox's
+  // synchronous-user-gesture requirement for sidebarAction.open() — there is
+  // no click event left in this call stack to be synchronous with by the time
+  // a message has been dispatched and received here.
+  if (message.type === 'OPEN_SIDEPANEL' && !IS_FIREFOX) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.sidePanel.open({ tabId: tabs[0].id }).catch(console.error);
