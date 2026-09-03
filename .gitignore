@@ -1,1 +1,8 @@
 key.pem
+
+# Claude Code state dumps
+C:/CLAUDE/state/
+
+# Build output / deps
+dist/
+node_modules/

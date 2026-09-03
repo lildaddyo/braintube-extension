@@ -45,7 +45,7 @@ def main():
 
     if not client_id:
         print("Enter your Google OAuth Client ID")
-        print("(from Google Cloud Console → Credentials → OAuth 2.0 Client IDs)")
+        print("(from Google Cloud Console > Credentials > OAuth 2.0 Client IDs)")
         client_id = input("CLIENT_ID: ").strip()
 
     if not client_secret:
@@ -84,7 +84,7 @@ def main():
     print(f"  Secret name:  CWS_REFRESH_TOKEN")
     print(f"  Secret value: {credentials.refresh_token}")
     print()
-    print("  GitHub → lildaddyo/braintube-extension → Settings →")
+    print("  GitHub > lildaddyo/braintube-extension > Settings >")
     print("  Secrets and variables → Actions → New repository secret")
     print()
     print("  Also set these if not already present:")
