@@ -97,7 +97,7 @@ async function loadSummary() {
   if (currentItem.summary) {
     html += `<div class="card">
       <h3>Summary</h3>
-      <p>${currentItem.summary}</p>
+      <p>${escHtml(currentItem.summary)}</p>
     </div>`;
   }
   
@@ -105,7 +105,7 @@ async function loadSummary() {
   if (currentItem.key_takeaways?.length > 0) {
     html += `<div class="card">
       <h3>Key Takeaways</h3>
-      <ul>${currentItem.key_takeaways.map(t => `<li>${t}</li>`).join('')}</ul>
+      <ul>${currentItem.key_takeaways.map(t => `<li>${escHtml(t)}</li>`).join('')}</ul>
     </div>`;
   }
   
@@ -142,9 +142,9 @@ async function loadTranscript() {
   let html = '';
   segments.forEach(seg => {
     html += `
-      <div class="transcript-segment" data-time="${seg.start_time_sec}">
+      <div class="transcript-segment" data-time="${Number(seg.start_time_sec) || 0}">
         <div class="segment-time">${formatTime(seg.start_time_sec)}</div>
-        <div class="segment-text">${seg.text}</div>
+        <div class="segment-text">${escHtml(seg.text)}</div>
       </div>
     `;
   });
@@ -173,8 +173,8 @@ async function loadHighlights() {
   highlights.forEach(h => {
     html += `
       <div class="highlight-card">
-        <div class="highlight-text">${h.text}</div>
-        ${h.note ? `<div class="highlight-note">${h.note}</div>` : ''}
+        <div class="highlight-text">${escHtml(h.text)}</div>
+        ${h.note ? `<div class="highlight-note">${escHtml(h.note)}</div>` : ''}
       </div>
     `;
   });
@@ -296,7 +296,9 @@ function renderMarkdown(raw) {
   const esc = s => s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
   // 2. Apply inline styles (bold, italic, code) to an already-escaped line.
   const inline = s => s
