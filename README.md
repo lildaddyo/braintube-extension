@@ -153,7 +153,6 @@ Four powerful tabs:
 
 ### Video Won't Save?
 - Check you're signed in
-- Check your subscription tier (Free = 5 videos max)
 - Check internet connection
 
 ## 📋 What's Different From Old Version?
@@ -187,9 +186,9 @@ Four powerful tabs:
 ## 📝 Notes
 
 - Chat requires videos to be indexed (processed)
-- Free tier: 5 videos max
+- Saving is free and unlimited on every plan
 - Timestamps are clickable in transcript
-- Extension works on youtube.com/watch pages only
+- The in-page Save button appears on youtube.com/watch pages; the popup can also save or bookmark any page and save Claude.ai or ChatGPT conversations
 
 ---
 
