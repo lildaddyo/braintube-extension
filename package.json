@@ -18,7 +18,7 @@
     "url": "https://github.com/lildaddyo/braintube-extension/issues"
   },
   "homepage": "https://github.com/lildaddyo/braintube-extension#readme",
-  "dependencies": {
-    "sharp": "^0.34.5"
+  "devDependencies": {
+    "sharp": "^0.35.5"
   }
 }
