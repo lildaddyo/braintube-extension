@@ -2,11 +2,10 @@
 import { CONFIG, buildUrl } from './config.js';
 
 async function getHeaders() {
-  chrome.storage.local.get(null, (items) => console.log('[BrainTube] ALL storage keys:', Object.keys(items), JSON.stringify(items).substring(0, 500)));
   const all = await chrome.storage.local.get(null);
   const session = all['bt_session'] || all['session'];
   const token = session?.access_token;
-  console.log('[BrainTube] getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', token ? token.substring(0, 20) + '...' : 'MISSING');
+  console.log('[BrainTube] getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', token ? 'present' : 'MISSING');
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -15,7 +14,6 @@ async function getHeaders() {
 }
 
 export async function processYouTube(url, videoId) {
-  chrome.storage.local.get(null, (items) => console.log('[BrainTube] ALL storage keys:', Object.keys(items), JSON.stringify(items).substring(0, 500)));
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
   let response;

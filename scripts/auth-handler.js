@@ -87,11 +87,11 @@ async function runGoogleAuth() {
       const params     = new URLSearchParams(hashString);
       const idToken    = params.get('id_token');
 
-      console.log('[BrainTube] id_token extracted:', idToken ? idToken.substring(0, 20) + '...' : 'NOT FOUND');
+      console.log('[BrainTube] id_token extracted:', idToken ? 'present' : 'NOT FOUND');
 
       if (!idToken) {
         const err = params.get('error') ?? 'id_token not found in redirect hash';
-        console.error('[BrainTube] Could not extract id_token. hashString:', hashString);
+        console.error('[BrainTube] Could not extract id_token. hash params:', Array.from(params.keys()));
         setStatus(`Sign-in failed: ${err}`, true);
         return;
       }

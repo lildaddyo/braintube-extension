@@ -307,7 +307,7 @@ async function handleGoogleSignIn() {
 
     if (!idToken) {
       const err = params.get('error') ?? 'id_token not found in redirect hash';
-      console.error('[BrainTube] Could not extract id_token. hash:', hashString);
+      console.error('[BrainTube] Could not extract id_token. hash params:', Array.from(params.keys()));
       throw new Error(err);
     }
 
