@@ -3,7 +3,9 @@
 export const CONFIG = {
   SUPABASE_URL: 'https://iqjnmmtvhyavgrsxpoao.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1',
-  WEB_APP_URL: 'https://brain-tube.com',
+  // The web app lives on app.brain-tube.com; brain-tube.com is the marketing
+  // site and returns 404 for /library and /search.
+  WEB_APP_URL: 'https://app.brain-tube.com',
   
   // API Endpoints
   ENDPOINTS: {

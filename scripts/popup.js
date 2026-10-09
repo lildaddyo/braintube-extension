@@ -495,15 +495,11 @@ openLibraryBtn.addEventListener('click', async (e) => {
   }
   console.log('[BrainTube] openLibraryBtn: user clicked — opening library tab');
 
-  // Read session from storage and append tokens to the URL hash so the web
-  // app can call supabase.auth.setSession() and log the user in automatically.
-  const all = await chrome.storage.local.get(['bt_session', 'session']);
-  const session = all.bt_session || all.session;
-  let url = `${CONFIG.WEB_APP_URL}/library`;
-  if (session?.access_token && session?.refresh_token) {
-    url += `#access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}&token_type=bearer`;
-  }
-  chrome.tabs.create({ url });
+  // Never put session tokens in the URL: a URL (fragment included) is kept in
+  // browser history, history sync and the omnibox, so a refresh token there
+  // can be replayed to take over the account. The web app signs the user in
+  // with its own session.
+  chrome.tabs.create({ url: `${CONFIG.WEB_APP_URL}/library` });
 });
 
 searchInput.addEventListener('keypress', (e) => {
