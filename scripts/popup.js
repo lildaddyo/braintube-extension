@@ -348,7 +348,7 @@ async function handleGoogleSignIn() {
 
     // Write both keys so getHeaders() in config.js always finds the token.
     await chrome.storage.local.set({ bt_session: session, session: session });
-    console.log('✅ Google sign-in complete:', data.user?.email);
+    console.log('✅ Google sign-in complete');
 
     // Update popup UI inline — no tab switch, no storage.onChanged needed.
     await showMainSection(session);

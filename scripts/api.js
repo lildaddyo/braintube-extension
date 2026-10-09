@@ -101,7 +101,7 @@ export async function chatItem(messages, itemId) {
 export async function chatCorpus(messages) {
   const response = await fetch(buildUrl(CONFIG.ENDPOINTS.CORPUS_CHAT), { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ messages }) });
   const rawText = await response.text();
-  console.log('[BrainTube] chatCorpus raw response:', rawText.substring(0, 500));
+  console.log('[BrainTube] chatCorpus response:', response.status, `${rawText.length} chars`);
   let data;
   try { data = JSON.parse(rawText); } catch { data = {}; }
   if (!response.ok) throw new Error(data.error || `Chat unavailable (${response.status})`);
