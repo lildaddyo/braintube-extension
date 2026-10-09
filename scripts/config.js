@@ -55,7 +55,7 @@ export async function getHeaders() {
   console.log('[BrainTube] config.getHeaders — ALL storage keys:', Object.keys(all));
   const session = all['bt_session'] || all['session'];
   const accessToken = session?.access_token;
-  console.log('[BrainTube] config.getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', accessToken ? accessToken.substring(0, 20) + '...' : 'MISSING');
+  console.log('[BrainTube] config.getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', accessToken ? 'present' : 'MISSING');
   return {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
