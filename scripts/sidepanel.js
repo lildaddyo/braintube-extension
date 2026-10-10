@@ -446,7 +446,8 @@ function renderBookmarks(items) {
       </div>`;
 
     el.querySelector('.bookmark-title').addEventListener('click', () => {
-      if (b.source_url) chrome.tabs.create({ url: b.source_url });
+      // Only open web URLs; a stored javascript:, data: or chrome: URL is ignored.
+      if (b.source_url && /^https?:\/\//i.test(b.source_url)) chrome.tabs.create({ url: b.source_url });
     });
 
     el.querySelector('.bm-read-btn').addEventListener('click', async e => {

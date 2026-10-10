@@ -24,7 +24,7 @@ export async function signIn(email, password) {
     const data = await response.json();
     await saveSession(data);
     
-    console.log('✅ Signed in:', data.user.email);
+    console.log('✅ Signed in');
     return data;
   } catch (error) {
     console.error('❌ Sign in error:', error);

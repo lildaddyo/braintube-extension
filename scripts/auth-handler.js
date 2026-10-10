@@ -76,9 +76,8 @@ async function runGoogleAuth() {
         return;
       }
 
-      console.log('[BrainTube] Full redirect URL:', redirectedTo);
-      console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1] ?? 'none');
-      console.log('[BrainTube] Search:', redirectedTo.split('?')[1] ?? 'none');
+      // Never log the redirect URL or its hash/query: the hash carries the
+      // Google id_token. Log only which parameter names came back.
 
       // Google returns id_token in the URL hash fragment.
       // Do NOT use new URL().hash — it keeps the leading '#', which makes the
@@ -87,7 +86,7 @@ async function runGoogleAuth() {
       const params     = new URLSearchParams(hashString);
       const idToken    = params.get('id_token');
 
-      console.log('[BrainTube] id_token extracted:', idToken ? 'present' : 'NOT FOUND');
+      console.log('[BrainTube] redirect params:', Array.from(params.keys()), '| id_token:', idToken ? 'present' : 'NOT FOUND');
 
       if (!idToken) {
         const err = params.get('error') ?? 'id_token not found in redirect hash';
@@ -137,7 +136,7 @@ async function runGoogleAuth() {
         // Write both keys so getHeaders() in config.js always finds the token
         // regardless of which code path reads it.
         await chrome.storage.local.set({ bt_session: session, session: session });
-        console.log('✅ Signed in:', data.user?.email);
+        console.log('✅ Signed in');
 
         // Close this tab. window.close() is unreliable for tabs opened via
         // chrome.tabs.create() — use chrome.tabs.remove() instead.
