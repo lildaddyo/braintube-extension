@@ -17,10 +17,24 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
   
   if (details.reason === 'install') {
-    trackEvent('extension_installed', { 
-      version: chrome.runtime.getManifest().version 
-    });
+    // The track endpoint needs a signed-in user, and nobody is signed in at install time (it answered 401
+    // and the install was never recorded). Remember the install and report it once a session exists.
+    chrome.storage.local
+      .set({ bt_install_pending: { version: chrome.runtime.getManifest().version, at: new Date().toISOString() } })
+      .then(reportPendingInstall);
   }
+});
+
+// Sends the remembered install once there is a session; keeps it for the next sign-in if the call fails.
+async function reportPendingInstall() {
+  const { bt_install_pending: pending, bt_session: session } = await chrome.storage.local.get(['bt_install_pending', 'bt_session']);
+  if (!pending || !session) return;
+  const ok = await trackEvent('extension_installed', { version: pending.version, installed_at: pending.at });
+  if (ok) await chrome.storage.local.remove('bt_install_pending');
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.bt_session && changes.bt_session.newValue) reportPendingInstall();
 });
 
 // Context menu handler

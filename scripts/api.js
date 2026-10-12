@@ -117,8 +117,11 @@ export async function checkSubscription() {
 
 export async function trackEvent(eventName, eventData = {}) {
   try {
-    await fetch(buildUrl(CONFIG.ENDPOINTS.TRACK), { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ event_name: eventName, event_data: eventData, page_path: '/extension' }) });
-  } catch {}
+    const res = await fetch(buildUrl(CONFIG.ENDPOINTS.TRACK), { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ event_name: eventName, event_data: eventData, page_path: '/extension' }) });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function getItem(videoId, userId) {
