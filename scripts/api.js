@@ -1,5 +1,6 @@
 // BrainTube Extension - API Module
 import { CONFIG, buildUrl } from './config.js';
+import { routeForUrl } from './routing.js';
 
 async function getHeaders() {
   const all = await chrome.storage.local.get(null);
@@ -13,14 +14,14 @@ async function getHeaders() {
   };
 }
 
-export async function processYouTube(url, videoId) {
+export async function processYouTube(url, videoId, extra = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
   let response;
   try {
     response = await fetch(
       buildUrl(CONFIG.ENDPOINTS.PROCESS_YOUTUBE),
-      { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ url, videoId }), signal: controller.signal }
+      { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ url, videoId, ...extra }), signal: controller.signal }
     );
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('Video save timed out after 30 seconds. The server may be busy — try again.');
@@ -143,24 +144,40 @@ export async function getHighlights(itemId) {
   return await response.json();
 }
 
-export async function saveWebPage(userId, title, url) {
-  const body = {
-    user_id: userId,
-    title: (title || url || 'Untitled Page').trim().slice(0, 500),
-    url: url || `braintube://extension/${Date.now()}`,
-    source_url: url || null,
-    source_type: 'web',
-    summary: `Saved: ${(title || url || '').slice(0, 300)}`,
-    is_bookmark: false,
-    is_archived: false,
-  };
-  const response = await fetch(buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}`), { method: 'POST', headers: { ...await getHeaders(), 'Prefer': 'return=representation' }, body: JSON.stringify(body) });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || `Save failed (${response.status})`);
+// Saves any page through the backend reader: process-youtube for videos, process-content for everything
+// else (it fetches the text, writes the summary and the search segments). page.title / page.text are what
+// the tab shows; the server uses them only when it cannot read the page itself (paywall, login wall,
+// blocked host, client-rendered app). Returns { itemId, duplicate, pending, sourceType }.
+export async function saveUrl(url, { bookmark = false, page = null } = {}) {
+  const route = routeForUrl(url, { bookmark });
+  if (!route) throw new Error('This page cannot be saved');
+  if (route.fn === 'process-youtube') {
+    const data = await processYouTube(route.body.url, route.videoId, route.body.isYouTubeMusic ? { isYouTubeMusic: true } : {});
+    const itemId = data.itemId || data.item?.id || null;
+    if (bookmark && itemId) await patchItem(itemId, { is_bookmark: true, is_read: false, bookmarked_at: new Date().toISOString() });
+    return { itemId, duplicate: data.duplicate === true, pending: data.pending === true, sourceType: 'youtube' };
   }
-  const data = await response.json();
-  return Array.isArray(data) ? data[0] : data;
+  const body = { ...route.body };
+  if (page?.title) body.page_title = String(page.title).slice(0, 500);
+  if (page?.text) body.page_text = String(page.text).slice(0, 60_000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let response;
+  try {
+    response = await fetch(buildUrl(CONFIG.ENDPOINTS.PROCESS_CONTENT), { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body), signal: controller.signal });
+  } catch (err) {
+    // The server keeps going after the popup stops waiting (seen 2026-10-16 under database load: the rows
+    // appeared a few seconds later), so a slow answer is not a failed save.
+    if (err.name === 'AbortError') return { itemId: null, duplicate: false, pending: true, slow: true, sourceType: null };
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  const data = await response.json().catch(() => ({}));
+  // A page already in the library answers 200 with existingId.
+  if (data.existingId) return { itemId: data.existingId, duplicate: true, pending: false, sourceType: null };
+  if (!response.ok || data.error) throw new Error(data.error || `Server error ${response.status}`);
+  return { itemId: data.itemId || null, duplicate: false, pending: data.pending === true, sourceType: data.sourceType || 'web' };
 }
 
 export async function getBookmarks(userId, filter = 'unread') {
@@ -170,28 +187,6 @@ export async function getBookmarks(userId, filter = 'unread') {
   const response = await fetch(buildUrl(query), { headers: await getHeaders() });
   if (!response.ok) return [];
   return await response.json();
-}
-
-export async function saveBookmark(userId, title, url, tags = []) {
-  const body = {
-    user_id: userId,
-    title: (title || 'Untitled Bookmark').trim().slice(0, 500),
-    url: url || `braintube://extension/${Date.now()}`,
-    source_url: url || null,
-    source_type: 'bookmark',
-    summary: `Bookmarked: ${(title || url || '').slice(0, 300)}`,
-    is_bookmark: true,
-    bookmarked_at: new Date().toISOString(),
-    is_archived: false,
-  };
-  if (tags.length > 0) body.tags = tags;
-  const response = await fetch(buildUrl(`${CONFIG.ENDPOINTS.REST}/${CONFIG.TABLES.ITEMS}`), { method: 'POST', headers: { ...await getHeaders(), 'Prefer': 'return=representation' }, body: JSON.stringify(body) });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || `Save failed (${response.status})`);
-  }
-  const data = await response.json();
-  return Array.isArray(data) ? data[0] : data;
 }
 
 export async function patchItem(itemId, updates) {

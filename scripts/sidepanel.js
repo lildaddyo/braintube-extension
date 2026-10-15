@@ -1,7 +1,8 @@
 // BrainTube Extension - Side Panel
 import { getSession, getCurrentUser } from './auth.js';
 import { getItem, getTranscriptSegments, getHighlights, generateSummary, chatItem, chatCorpus, trackEvent,
-         getBookmarks, saveBookmark, patchItem } from './api.js';
+         getBookmarks, saveUrl, patchItem } from './api.js';
+import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
 
@@ -499,10 +500,10 @@ async function bmSaveCurrentPage() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const url   = tab?.url || '';
-    const title = tab?.title?.replace(/ [-–|].*$/, '').trim() || url;
     const rawTags = (document.getElementById('bookmark-tags-input')?.value || '');
     const tags = rawTags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-    await saveBookmark(currentUser.id, title, url, tags);
+    const res = await saveUrl(url, { bookmark: true, page: await readTabPage(tab?.id) });
+    if (tags.length > 0 && res.itemId) await patchItem(res.itemId, { tags });
     if (document.getElementById('bookmark-tags-input')) document.getElementById('bookmark-tags-input').value = '';
     btn.textContent = '✅ Saved!';
     setTimeout(() => { btn.textContent = '🔖 Bookmark this page'; btn.disabled = false; }, 1800);

@@ -1,6 +1,7 @@
 // BrainTube Extension - Popup Script
 import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
-import { processYouTube, getItem, trackEvent, saveWebPage, saveBookmark } from './api.js';
+import { processYouTube, getItem, trackEvent, saveUrl } from './api.js';
+import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getSession as getStorageSession } from './config.js';
 
@@ -381,7 +382,7 @@ async function handleSaveVideo() {
   saveVideoBtn.textContent = '💾 Saving...';
   
   try {
-    await processYouTube(currentVideo.url, currentVideo.videoId);
+    await processYouTube(currentVideo.url, currentVideo.videoId, currentVideo.isYouTubeMusic ? { isYouTubeMusic: true } : {});
     await trackEvent('extension_video_saved', {
       video_id: currentVideo.videoId,
       source: 'chrome_extension'
@@ -397,48 +398,41 @@ async function handleSaveVideo() {
   }
 }
 
-// Handle Save URL — saves the current tab as a generic web item (any page)
-async function handleSaveUrl() {
+// Save URL / Bookmark — any page. The backend reads it (text, summary, search segments); the tab's own
+// text goes along as a fallback for pages the server cannot read.
+async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
 
-  saveUrlBtn.disabled = true;
-  saveUrlBtn.textContent = '⏳ Saving…';
+  btn.disabled = true;
+  btn.textContent = busyLabel;
+  const reset = () => setTimeout(() => { btn.textContent = idleLabel; btn.disabled = false; }, 2500);
 
   try {
-    const user = await getCurrentUser();
-    if (!user?.id) throw new Error('Not signed in');
-    await saveWebPage(user.id, tab.title, tab.url);
-    saveUrlBtn.textContent = '✓ Saved!';
-    showToast('Page saved to your library!');
-    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+    const session = await getStorageSession();
+    if (!session?.access_token) throw new Error('Not signed in — please sign in first');
+    const page = await readTabPage(tab.id);
+    const res = await saveUrl(tab.url, { bookmark, page });
+    btn.textContent = res.duplicate ? '✓ Already saved' : doneLabel;
+    showToast(res.duplicate
+      ? 'Already in your library'
+      : res.slow ? 'The server is slow — the page will appear in your library shortly.'
+      : bookmark ? 'Bookmarked! Find it in the 🔖 Saved tab.' : 'Saved! The summary will be ready in a minute.');
+    trackEvent(bookmark ? 'extension_bookmark_saved' : 'extension_page_saved', { source_type: res.sourceType, duplicate: res.duplicate, page_text: !!page?.text });
+    reset();
   } catch (err) {
     showToast(err.message || 'Save failed', true);
-    saveUrlBtn.textContent = '❌ Error';
-    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+    btn.textContent = '❌ Error';
+    reset();
   }
 }
 
-// Handle Bookmark — saves the current tab as a bookmark (any page)
-async function handleBookmark() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+function handleSaveUrl() {
+  return saveCurrentTab(saveUrlBtn, { bookmark: false, idleLabel: '➕ Save URL', busyLabel: '⏳ Saving…', doneLabel: '✓ Saved!' });
+}
 
-  bookmarkBtn.disabled = true;
-  bookmarkBtn.textContent = '⏳ Saving…';
-
-  try {
-    const user = await getCurrentUser();
-    if (!user?.id) throw new Error('Not signed in');
-    await saveBookmark(user.id, tab.title, tab.url);
-    bookmarkBtn.textContent = '✓ Bookmarked!';
-    showToast('Bookmarked! Find it in the 🔖 Saved tab.');
-    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
-  } catch (err) {
-    showToast(err.message || 'Bookmark failed', true);
-    bookmarkBtn.textContent = '❌ Error';
-    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
-  }
+function handleBookmark() {
+  return saveCurrentTab(bookmarkBtn, { bookmark: true, idleLabel: '🔖 Bookmark', busyLabel: '⏳ Saving…', doneLabel: '✓ Bookmarked!' });
 }
 
 // Event Listeners

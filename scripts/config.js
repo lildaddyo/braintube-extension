@@ -10,6 +10,7 @@ export const CONFIG = {
   // API Endpoints
   ENDPOINTS: {
     PROCESS_YOUTUBE: '/functions/v1/process-youtube',
+    PROCESS_CONTENT: '/functions/v1/process-content',
     GENERATE_SUMMARY: '/functions/v1/generate-summary',
     QUICK_SEARCH: '/functions/v1/quick-search',
     SEARCH: '/functions/v1/search',
