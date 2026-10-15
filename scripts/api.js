@@ -166,7 +166,9 @@ export async function saveUrl(url, { bookmark = false, page = null } = {}) {
   try {
     response = await fetch(buildUrl(CONFIG.ENDPOINTS.PROCESS_CONTENT), { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body), signal: controller.signal });
   } catch (err) {
-    if (err.name === 'AbortError') throw new Error('Save timed out after 30 seconds. The server may be busy — try again.');
+    // The server keeps going after the popup stops waiting (seen 2026-10-16 under database load: the rows
+    // appeared a few seconds later), so a slow answer is not a failed save.
+    if (err.name === 'AbortError') return { itemId: null, duplicate: false, pending: true, slow: true, sourceType: null };
     throw err;
   } finally {
     clearTimeout(timeoutId);

@@ -416,6 +416,7 @@ async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }
     btn.textContent = res.duplicate ? '✓ Already saved' : doneLabel;
     showToast(res.duplicate
       ? 'Already in your library'
+      : res.slow ? 'The server is slow — the page will appear in your library shortly.'
       : bookmark ? 'Bookmarked! Find it in the 🔖 Saved tab.' : 'Saved! The summary will be ready in a minute.');
     trackEvent(bookmark ? 'extension_bookmark_saved' : 'extension_page_saved', { source_type: res.sourceType, duplicate: res.duplicate, page_text: !!page?.text });
     reset();
