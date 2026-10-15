@@ -11,12 +11,19 @@ function extractVisibleText() {
   return { title: document.title || '', text: text.length >= 500 || text.length >= body.length / 2 ? text : body };
 }
 
+// Consent screens and bot checks are not the page: sending them would let the server summarise the wall.
+const INTERSTITIAL = /^(?:[^|–-]{1,30}[|–-]\s*)?(before you continue|prove your humanity|just a moment|attention required|access denied|verify you are human|are you a robot|security check|one more step)\b/i;
+
+export function isInterstitial(page) {
+  return INTERSTITIAL.test((page?.title || '').trim()) || INTERSTITIAL.test((page?.text || '').trim().slice(0, 200));
+}
+
 export async function readTabPage(tabId) {
   if (!tabId || !chrome.scripting?.executeScript) return null;
   try {
     const [res] = await chrome.scripting.executeScript({ target: { tabId }, func: extractVisibleText });
     const page = res?.result;
-    if (!page || typeof page.text !== 'string') return null;
+    if (!page || typeof page.text !== 'string' || isInterstitial(page)) return null;
     return { title: page.title.slice(0, 500), text: page.text.slice(0, 60_000) };
   } catch (err) {
     // chrome://, the Web Store, PDF viewer and pages without activeTab refuse injection.

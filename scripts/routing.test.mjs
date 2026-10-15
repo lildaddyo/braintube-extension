@@ -33,3 +33,12 @@ assert.ok(!Number.isNaN(Date.parse(bm.bookmarked_at)));
 for (const u of ['chrome://newtab/', 'file:///C:/x.pdf', 'chrome-extension://abc/popup.html', 'not a url', '']) assert.equal(routeForUrl(u), null, u);
 
 console.log('routing: all checks passed');
+
+// Consent walls and bot checks are never sent as page text.
+const capSrc = readFileSync(new URL('./page-capture.js', import.meta.url), 'utf8');
+const { isInterstitial } = await import('data:text/javascript,' + encodeURIComponent(capSrc));
+for (const title of ['Before you continue to YouTube', 'Reddit - Prove your humanity', 'Just a moment...', 'Attention Required! | Cloudflare'])
+  assert.ok(isInterstitial({ title, text: '' }), title);
+assert.ok(isInterstitial({ title: 'reddit.com', text: 'Prove your humanity\n\nWe need to check...' }));
+assert.ok(!isInterstitial({ title: 'Knowledge management - Wikipedia', text: 'Knowledge management (KM) is the set of procedures...' }));
+console.log('page-capture: interstitial checks passed');
