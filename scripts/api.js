@@ -1,18 +1,6 @@
 // BrainTube Extension - API Module
-import { CONFIG, buildUrl } from './config.js';
+import { CONFIG, buildUrl, getHeaders } from './config.js';
 import { routeForUrl } from './routing.js';
-
-async function getHeaders() {
-  const all = await chrome.storage.local.get(null);
-  const session = all['bt_session'] || all['session'];
-  const token = session?.access_token;
-  console.log('[BrainTube] getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', token ? 'present' : 'MISSING');
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'apikey': CONFIG.SUPABASE_ANON_KEY,
-  };
-}
 
 export async function processYouTube(url, videoId, extra = {}) {
   const controller = new AbortController();
