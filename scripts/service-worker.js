@@ -1,6 +1,6 @@
 // BrainTube Extension - Service Worker
 import { trackEvent } from './api.js';
-import { CONFIG } from './config.js';
+import { CONFIG, getValidSession } from './config.js';
 
 console.log('🧠 BrainTube service worker started');
 
@@ -118,8 +118,7 @@ async function saveAiConversation(tabId, platform) {
   }
 
   // Get auth token
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  const token  = (stored.bt_session || stored.session)?.access_token;
+  const token  = (await getValidSession().catch(() => null))?.access_token;
   if (!token) throw new Error('NOT_LOGGED_IN');
 
   // POST to BrainTube
@@ -153,8 +152,7 @@ const SYNC_PLAYLIST_URL  = `${SUPABASE_URL}/functions/v1/youtube-sync-playlist`;
 async function syncPlaylist(youtubePlaylistId) {
   if (!youtubePlaylistId) return;
 
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  const token  = (stored.bt_session || stored.session)?.access_token;
+  const token  = (await getValidSession().catch(() => null))?.access_token;
   if (!token) {
     console.log('[BrainTube] syncPlaylist: not logged in, skipping');
     return;

@@ -3,7 +3,7 @@ import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
 import { processYouTube, getItem, trackEvent, saveUrl } from './api.js';
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
-import { CONFIG, getSession as getStorageSession } from './config.js';
+import { CONFIG, getValidSession as getStorageSession } from './config.js';
 
 // Google OAuth client ID — must match Google Cloud Console + Supabase provider config.
 // Redirect URI: chrome.identity.getRedirectURL() (no suffix).
