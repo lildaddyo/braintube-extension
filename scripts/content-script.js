@@ -51,7 +51,7 @@ function injectButton() {
   btn.id = 'braintube-watch-btn';
   btn.className = 'braintube-btn';
   btn.textContent = '🧠 BrainTube';
-  btn.title = 'Save to BrainTube';
+  btn.title = chrome.i18n.getMessage('saveToBrainTube');
 
   // Inline brand styles — flat #866CEF, YouTube action-bar height
   Object.assign(btn.style, {

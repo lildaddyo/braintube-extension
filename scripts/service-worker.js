@@ -11,7 +11,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   // Create context menu
   chrome.contextMenus.create({
     id: 'save-to-braintube',
-    title: 'Save to BrainTube',
+    title: chrome.i18n.getMessage('saveToBrainTube'),
     contexts: ['page', 'link'],
     documentUrlPatterns: ['*://www.youtube.com/watch*', '*://youtu.be/*']
   });

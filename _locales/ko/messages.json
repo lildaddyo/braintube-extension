@@ -1,0 +1,386 @@
+{
+  "htmlLang": {
+    "message": "ko"
+  },
+  "extName": {
+    "message": "BrainTube - YouTube 지식 베이스"
+  },
+  "extDescription": {
+    "message": "YouTube 영상을 저장하고 AI 요약을 받아 보세요. 내 지식 베이스도 바로 검색할 수 있어요."
+  },
+  "saveToBrainTube": {
+    "message": "BrainTube에 저장"
+  },
+  "loadingDots": {
+    "message": "불러오는 중…"
+  },
+  "signInTitle": {
+    "message": "BrainTube에 로그인"
+  },
+  "emailPlaceholder": {
+    "message": "이메일"
+  },
+  "passwordPlaceholder": {
+    "message": "비밀번호"
+  },
+  "signIn": {
+    "message": "로그인"
+  },
+  "or": {
+    "message": "또는"
+  },
+  "signInWithGoogle": {
+    "message": "Google로 로그인"
+  },
+  "searchPlaceholder": {
+    "message": "내 라이브러리 검색…"
+  },
+  "currentVideo": {
+    "message": "현재 영상"
+  },
+  "viewNote": {
+    "message": "메모 보기"
+  },
+  "aiChat": {
+    "message": "AI 채팅"
+  },
+  "aiConversation": {
+    "message": "AI 대화"
+  },
+  "claudeConversation": {
+    "message": "Claude.ai 대화"
+  },
+  "chatgptConversation": {
+    "message": "ChatGPT 대화"
+  },
+  "saveConversation": {
+    "message": "💾 대화 저장"
+  },
+  "saveThisVideo": {
+    "message": "💾 이 영상 저장"
+  },
+  "saveUrl": {
+    "message": "➕ URL 저장"
+  },
+  "bookmark": {
+    "message": "🔖 북마크"
+  },
+  "openLibrary": {
+    "message": "📚 라이브러리 열기"
+  },
+  "signOut": {
+    "message": "로그아웃"
+  },
+  "userFallback": {
+    "message": "사용자"
+  },
+  "statusProcessingDots": {
+    "message": "🟡 처리 중…"
+  },
+  "statusNeedsSummary": {
+    "message": "🟡 요약 필요"
+  },
+  "statusReady": {
+    "message": "🟢 준비됨"
+  },
+  "statusError": {
+    "message": "🔴 오류"
+  },
+  "savingEllipsis": {
+    "message": "⏳ 저장 중…"
+  },
+  "summarisingOnServer": {
+    "message": "BrainTube 서버에서 요약하는 중…"
+  },
+  "savedBang": {
+    "message": "✅ 저장했어요!"
+  },
+  "convSavedNoText": {
+    "message": "\"$TITLE$\" 저장했어요 (전체 내용을 저장하려면 페이지를 새로고침한 뒤 다시 시도해 주세요)",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "urlSavedToBrainTube": {
+    "message": "BrainTube에 URL을 저장했어요"
+  },
+  "convSaved": {
+    "message": "BrainTube에 대화를 저장했어요"
+  },
+  "signInFirstArrow": {
+    "message": "먼저 BrainTube에 로그인해 주세요 ↑"
+  },
+  "sessionExpired": {
+    "message": "세션이 만료됐어요. 로그아웃한 뒤 다시 로그인해 주세요"
+  },
+  "saveFailedRetry": {
+    "message": "저장하지 못했어요. 다시 시도해 주세요"
+  },
+  "enterEmailPassword": {
+    "message": "이메일과 비밀번호를 입력해 주세요"
+  },
+  "signingIn": {
+    "message": "로그인 중…"
+  },
+  "signInFailed": {
+    "message": "로그인하지 못했어요"
+  },
+  "openingGoogle": {
+    "message": "⏳ Google 로그인 여는 중…"
+  },
+  "verifying": {
+    "message": "⏳ 확인 중…"
+  },
+  "signInCancelled": {
+    "message": "로그인을 취소했어요"
+  },
+  "signInFailedDetail": {
+    "message": "로그인하지 못했어요: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "notSignedIn": {
+    "message": "로그인하지 않았어요. 먼저 로그인해 주세요"
+  },
+  "savingDots": {
+    "message": "💾 저장 중…"
+  },
+  "videoSaved": {
+    "message": "영상을 저장했어요! 처리를 시작했어요."
+  },
+  "failedSaveVideo": {
+    "message": "영상을 저장하지 못했어요"
+  },
+  "cannotReadTab": {
+    "message": "현재 탭의 URL을 읽지 못했어요"
+  },
+  "alreadySavedBtn": {
+    "message": "✓ 이미 저장됨"
+  },
+  "alreadyInLibrary": {
+    "message": "이미 내 라이브러리에 있어요"
+  },
+  "serverSlow": {
+    "message": "서버 응답이 느려요. 곧 내 라이브러리에 페이지가 나타나요."
+  },
+  "bookmarkedToast": {
+    "message": "북마크했어요! 🔖 저장됨 탭에서 볼 수 있어요."
+  },
+  "savedSummarySoon": {
+    "message": "저장했어요! 1분 안에 요약이 준비돼요."
+  },
+  "saveFailed": {
+    "message": "저장하지 못했어요"
+  },
+  "errorBtn": {
+    "message": "❌ 오류"
+  },
+  "savedCheck": {
+    "message": "✓ 저장했어요!"
+  },
+  "bookmarkedCheck": {
+    "message": "✓ 북마크했어요!"
+  },
+  "sidePanelTitle": {
+    "message": "BrainTube 사이드 패널"
+  },
+  "tabChat": {
+    "message": "💬 채팅"
+  },
+  "tabSummary": {
+    "message": "📝 요약"
+  },
+  "tabTranscript": {
+    "message": "📄 스크립트"
+  },
+  "tabHighlights": {
+    "message": "✨ 하이라이트"
+  },
+  "tabSaved": {
+    "message": "🔖 저장됨"
+  },
+  "videoNotInLibrary": {
+    "message": "라이브러리에 없는 영상이에요"
+  },
+  "saveToUnlock": {
+    "message": "이 영상을 저장하면 AI 기능을 쓸 수 있어요"
+  },
+  "modeThisVideo": {
+    "message": "📹 이 영상"
+  },
+  "modeAllKnowledge": {
+    "message": "🧠 내 모든 지식"
+  },
+  "askVideoPlaceholder": {
+    "message": "이 영상에 대해 무엇이든 물어보세요…"
+  },
+  "askCorpusPlaceholder": {
+    "message": "저장한 모든 내용에 대해 물어보세요…"
+  },
+  "send": {
+    "message": "보내기"
+  },
+  "tagsPlaceholder": {
+    "message": "태그 (쉼표로 구분, 선택)"
+  },
+  "bookmarkThisPage": {
+    "message": "🔖 이 페이지 북마크"
+  },
+  "filterUnread": {
+    "message": "안 읽음"
+  },
+  "filterRead": {
+    "message": "읽음"
+  },
+  "filterAll": {
+    "message": "전체"
+  },
+  "pleaseSignIn": {
+    "message": "BrainTube를 사용하려면 로그인해 주세요"
+  },
+  "openYouTubeVideo": {
+    "message": "이 기능을 쓰려면 YouTube 영상을 열어 주세요"
+  },
+  "youtubeVideo": {
+    "message": "YouTube 영상"
+  },
+  "failedLoadVideo": {
+    "message": "영상 정보를 불러오지 못했어요"
+  },
+  "statusProcessing": {
+    "message": "🟡 처리 중"
+  },
+  "generateSummary": {
+    "message": "🤖 AI 요약 만들기"
+  },
+  "summaryHeading": {
+    "message": "요약"
+  },
+  "keyTakeaways": {
+    "message": "핵심 내용"
+  },
+  "processingBtn": {
+    "message": "⏳ 처리 중…"
+  },
+  "startedRefresh": {
+    "message": "✅ 시작했어요! 1분 뒤에 새로고침해 주세요"
+  },
+  "failedTryAgain": {
+    "message": "❌ 하지 못했어요. 다시 시도해 주세요"
+  },
+  "noTranscript": {
+    "message": "스크립트가 없어요"
+  },
+  "noHighlights": {
+    "message": "아직 하이라이트가 없어요"
+  },
+  "greetItem": {
+    "message": "👋 안녕하세요! 이 영상에 대해 무엇이든 물어보세요!"
+  },
+  "greetCorpus": {
+    "message": "🧠 저장한 지식 베이스 전체에서 무엇이든 물어보세요!"
+  },
+  "stillProcessingNote": {
+    "message": "⚠️ 참고: 이 영상은 아직 처리 중이에요. 색인이 끝나면 채팅할 수 있어요."
+  },
+  "stillProcessingWait": {
+    "message": "⏳ 이 영상은 아직 처리 중이에요. 색인이 끝난 뒤에 채팅해 주세요."
+  },
+  "thinking": {
+    "message": "💭 생각 중…"
+  },
+  "justNow": {
+    "message": "방금"
+  },
+  "minutesAgo": {
+    "message": "$COUNT$분 전",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "hoursAgo": {
+    "message": "$COUNT$시간 전",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "daysAgo": {
+    "message": "$COUNT$일 전",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "loadingEllipsis": {
+    "message": "불러오는 중…"
+  },
+  "failedLoadBookmarks": {
+    "message": "북마크를 불러오지 못했어요."
+  },
+  "emptyUnread": {
+    "message": "아직 안 읽은 북마크가 없어요."
+  },
+  "emptyRead": {
+    "message": "아직 읽은 북마크가 없어요."
+  },
+  "emptyAll": {
+    "message": "아직 북마크가 없어요."
+  },
+  "saveForLaterHint": {
+    "message": "위 버튼으로 나중에 볼 페이지를 저장해 보세요."
+  },
+  "markUnread": {
+    "message": "안 읽음으로 표시"
+  },
+  "markRead": {
+    "message": "읽음으로 표시"
+  },
+  "removeBookmark": {
+    "message": "북마크 삭제"
+  },
+  "signInFirstWarn": {
+    "message": "⚠️ 먼저 로그인해 주세요"
+  },
+  "authPageTitle": {
+    "message": "BrainTube – 로그인 중…"
+  },
+  "connectingGoogle": {
+    "message": "Google에 연결하는 중…"
+  },
+  "waitingGoogle": {
+    "message": "Google 로그인을 기다리는 중…"
+  },
+  "signInCancelledTab": {
+    "message": "로그인을 취소했거나 로그인하지 못했어요. 이 탭은 닫아도 돼요."
+  },
+  "signingInToBrainTube": {
+    "message": "BrainTube에 로그인하는 중…"
+  },
+  "saveTimedOut": {
+    "message": "영상 저장이 30초 안에 끝나지 않았어요. 서버가 바쁠 수 있어요. 다시 시도해 주세요."
+  },
+  "chatUnavailable": {
+    "message": "지금은 채팅을 쓸 수 없어요. 잠시 후 다시 시도해 주세요."
+  },
+  "chatUnavailableStatus": {
+    "message": "지금은 채팅을 쓸 수 없어요 ($STATUS$)",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "pageCannotBeSaved": {
+    "message": "이 페이지는 저장할 수 없어요"
+  }
+}

@@ -129,3 +129,6 @@ input[type="password"],
   gap: 8px;
   margin-top: 12px;
 }
+
+/* Korean: wrap between words, never inside one */
+:lang(ko) body { word-break: keep-all; }

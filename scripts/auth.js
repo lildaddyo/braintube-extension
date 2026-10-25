@@ -1,5 +1,6 @@
 // BrainTube Extension - Authentication Module
 import { CONFIG, buildUrl, getValidSession } from './config.js';
+import { t } from './i18n.js';
 
 // Sign in with email/password
 export async function signIn(email, password) {
@@ -18,7 +19,7 @@ export async function signIn(email, password) {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error_description || error.msg || 'Sign in failed');
+      throw new Error(error.error_description || error.msg || t('signInFailed'));
     }
     
     const data = await response.json();

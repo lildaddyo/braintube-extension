@@ -302,3 +302,6 @@ body {
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* Korean: wrap between words, never inside one */
+:lang(ko) body { word-break: keep-all; }

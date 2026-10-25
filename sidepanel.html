@@ -3,43 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BrainTube Side Panel</title>
+  <title data-i18n="sidePanelTitle">BrainTube Side Panel</title>
   <link rel="stylesheet" href="styles/sidepanel.css">
 </head>
 <body>
   <div class="header">
     <h1><img src="icons/icon-128.png" class="logo-icon-img" width="28" height="28" style="border-radius:6px;vertical-align:middle;margin-right:6px"> BrainTube</h1>
-    <p id="video-title">Loading...</p>
+    <p id="video-title" data-i18n="loadingDots">Loading...</p>
   </div>
   
   <div class="tabs">
-    <button class="tab active" data-tab="chat">💬 Chat</button>
-    <button class="tab" data-tab="summary">📝 Summary</button>
-    <button class="tab" data-tab="transcript">📄 Transcript</button>
-    <button class="tab" data-tab="highlights">✨ Highlights</button>
-    <button class="tab" data-tab="bookmarks">🔖 Saved</button>
+    <button class="tab active" data-tab="chat" data-i18n="tabChat">💬 Chat</button>
+    <button class="tab" data-tab="summary" data-i18n="tabSummary">📝 Summary</button>
+    <button class="tab" data-tab="transcript" data-i18n="tabTranscript">📄 Transcript</button>
+    <button class="tab" data-tab="highlights" data-i18n="tabHighlights">✨ Highlights</button>
+    <button class="tab" data-tab="bookmarks" data-i18n="tabSaved">🔖 Saved</button>
   </div>
   
   <div id="loading" class="loading">
     <div class="spinner"></div>
-    <p>Loading...</p>
+    <p data-i18n="loadingDots">Loading...</p>
   </div>
   
   <div id="empty" class="empty" style="display: none;">
-    <p>Video not in library</p>
-    <p class="empty-hint">Save this video to unlock AI features</p>
+    <p data-i18n="videoNotInLibrary">Video not in library</p>
+    <p class="empty-hint" data-i18n="saveToUnlock">Save this video to unlock AI features</p>
   </div>
   
   <!-- Chat Tab -->
   <div id="tab-chat" class="tab-content active">
     <div class="chat-mode-toggle">
-      <button class="chat-mode-btn active" data-mode="item">📹 This video</button>
-      <button class="chat-mode-btn" data-mode="corpus">🧠 All my knowledge</button>
+      <button class="chat-mode-btn active" data-mode="item" data-i18n="modeThisVideo">📹 This video</button>
+      <button class="chat-mode-btn" data-mode="corpus" data-i18n="modeAllKnowledge">🧠 All my knowledge</button>
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-container">
-      <textarea id="chat-input" placeholder="Ask anything about this video..." rows="2"></textarea>
-      <button id="chat-send" class="btn-send">Send</button>
+      <textarea id="chat-input" placeholder="Ask anything about this video..." data-i18n-placeholder="askVideoPlaceholder" rows="2"></textarea>
+      <button id="chat-send" class="btn-send" data-i18n="send">Send</button>
     </div>
   </div>
   
@@ -61,13 +61,13 @@
   <!-- Bookmarks Tab -->
   <div id="tab-bookmarks" class="tab-content">
     <div class="bookmark-save-bar">
-      <input type="text" id="bookmark-tags-input" placeholder="Tags (comma-separated, optional)" class="bookmark-tags-field">
-      <button id="bookmark-this-page" class="btn-primary bookmark-save-btn">🔖 Bookmark this page</button>
+      <input type="text" id="bookmark-tags-input" placeholder="Tags (comma-separated, optional)" data-i18n-placeholder="tagsPlaceholder" class="bookmark-tags-field">
+      <button id="bookmark-this-page" class="btn-primary bookmark-save-btn" data-i18n="bookmarkThisPage">🔖 Bookmark this page</button>
     </div>
     <div class="filter-pills">
-      <button class="filter-pill active" data-filter="unread">Unread</button>
-      <button class="filter-pill" data-filter="read">Read</button>
-      <button class="filter-pill" data-filter="all">All</button>
+      <button class="filter-pill active" data-filter="unread" data-i18n="filterUnread">Unread</button>
+      <button class="filter-pill" data-filter="read" data-i18n="filterRead">Read</button>
+      <button class="filter-pill" data-filter="all" data-i18n="filterAll">All</button>
     </div>
     <div id="bookmarks-list"></div>
   </div>
