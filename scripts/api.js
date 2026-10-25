@@ -1,6 +1,7 @@
 // BrainTube Extension - API Module
 import { CONFIG, buildUrl, getHeaders } from './config.js';
 import { routeForUrl } from './routing.js';
+import { t } from './i18n.js';
 
 export async function processYouTube(url, videoId, extra = {}) {
   const controller = new AbortController();
@@ -12,7 +13,7 @@ export async function processYouTube(url, videoId, extra = {}) {
       { method: 'POST', headers: await getHeaders(), body: JSON.stringify({ url, videoId, ...extra }), signal: controller.signal }
     );
   } catch (err) {
-    if (err.name === 'AbortError') throw new Error('Video save timed out after 30 seconds. The server may be busy — try again.');
+    if (err.name === 'AbortError') throw new Error(t('saveTimedOut'));
     throw err;
   } finally {
     clearTimeout(timeoutId);
@@ -59,7 +60,7 @@ async function readSseStream(response) {
       } catch { /* ignore */ }
     }
   }
-  if (!fullText) throw new Error('Chat unavailable — please try again in a moment.');
+  if (!fullText) throw new Error(t('chatUnavailable'));
   return fullText;
 }
 
@@ -67,7 +68,7 @@ async function readJsonOrText(response) {
   const text = await response.text();
   console.error('[BrainTube] chat raw response:', text);
   if (!response.ok) {
-    let msg = 'Chat unavailable — please try again in a moment.';
+    let msg = t('chatUnavailable');
     try { msg = JSON.parse(text).error || msg; } catch {}
     throw new Error(msg);
   }
@@ -76,7 +77,7 @@ async function readJsonOrText(response) {
     if (data.error) throw new Error(data.error);
     return data.answer || data.reply || data.response || data.message || data.content || text;
   } catch {
-    throw new Error('Chat unavailable — please try again in a moment.');
+    throw new Error(t('chatUnavailable'));
   }
 }
 
@@ -93,9 +94,9 @@ export async function chatCorpus(messages) {
   console.log('[BrainTube] chatCorpus response:', response.status, `${rawText.length} chars`);
   let data;
   try { data = JSON.parse(rawText); } catch { data = {}; }
-  if (!response.ok) throw new Error(data.error || `Chat unavailable (${response.status})`);
+  if (!response.ok) throw new Error(data.error || t('chatUnavailableStatus', response.status));
   const text = data.answer || data.reply || data.response || data.message || data.content || '';
-  if (!text) throw new Error('Chat unavailable — please try again in a moment.');
+  if (!text) throw new Error(t('chatUnavailable'));
   return text;
 }
 
@@ -138,7 +139,7 @@ export async function getHighlights(itemId) {
 // blocked host, client-rendered app). Returns { itemId, duplicate, pending, sourceType }.
 export async function saveUrl(url, { bookmark = false, page = null } = {}) {
   const route = routeForUrl(url, { bookmark });
-  if (!route) throw new Error('This page cannot be saved');
+  if (!route) throw new Error(t('pageCannotBeSaved'));
   if (route.fn === 'process-youtube') {
     const data = await processYouTube(route.body.url, route.videoId, route.body.isYouTubeMusic ? { isYouTubeMusic: true } : {});
     const itemId = data.itemId || data.item?.id || null;

@@ -19,17 +19,17 @@
     <!-- Loading -->
     <div id="loading" class="section">
       <div class="spinner"></div>
-      <p>Loading...</p>
+      <p data-i18n="loadingDots">Loading...</p>
     </div>
     
     <!-- Auth Section -->
     <div id="auth" class="section" style="display: none;">
-      <h2>Sign in to BrainTube</h2>
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
+      <h2 data-i18n="signInTitle">Sign in to BrainTube</h2>
+      <input type="email" id="email" placeholder="Email" data-i18n-placeholder="emailPlaceholder" />
+      <input type="password" id="password" placeholder="Password" data-i18n-placeholder="passwordPlaceholder" />
       <div id="auth-error" style="display:none;color:#fca5a5;font-size:12px;margin:-4px 0 4px;text-align:center;"></div>
-      <button class="btn-primary" id="signin-btn">Sign In</button>
-      <div class="divider">or</div>
+      <button class="btn-primary" id="signin-btn" data-i18n="signIn">Sign In</button>
+      <div class="divider" data-i18n="or">or</div>
       <button class="btn-google" id="google-signin-btn">
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
@@ -37,7 +37,7 @@
           <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
           <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
         </svg>
-        Sign in with Google
+        <span data-i18n="signInWithGoogle">Sign in with Google</span>
       </button>
     </div>
     
@@ -49,44 +49,45 @@
         id="search" 
         class="search-input" 
         placeholder="Search your library..."
+        data-i18n-placeholder="searchPlaceholder"
       />
       
       <!-- Current Video -->
       <div id="current-video" class="card" style="display: none;">
-        <div class="card-header">Current Video</div>
+        <div class="card-header" data-i18n="currentVideo">Current Video</div>
         <div class="video-info">
           <div class="video-title" id="video-title"></div>
           <div class="video-status" id="video-status"></div>
         </div>
         <div class="card-actions">
-          <button class="btn-primary btn-sm" id="view-note-btn">View Note</button>
-          <button class="btn-secondary btn-sm" id="ai-chat-btn">AI Chat</button>
+          <button class="btn-primary btn-sm" id="view-note-btn" data-i18n="viewNote">View Note</button>
+          <button class="btn-secondary btn-sm" id="ai-chat-btn" data-i18n="aiChat">AI Chat</button>
         </div>
       </div>
       
       <!-- AI Conversation Capture (shown on claude.ai / chatgpt.com) -->
       <div id="ai-capture" style="display: none;">
         <div class="card" id="ai-capture-card">
-          <div class="card-header" id="ai-platform-label">AI Conversation</div>
+          <div class="card-header" id="ai-platform-label" data-i18n="aiConversation">AI Conversation</div>
           <div id="ai-save-status" style="font-size:12px; margin: 6px 0; opacity: 0.8;"></div>
           <div class="card-actions">
-            <button class="btn-primary btn-sm" id="save-conversation-btn">💾 Save Conversation</button>
+            <button class="btn-primary btn-sm" id="save-conversation-btn" data-i18n="saveConversation">💾 Save Conversation</button>
           </div>
         </div>
       </div>
 
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <button class="btn-action" id="save-video-btn" style="display: none;">
+        <button class="btn-action" id="save-video-btn" style="display: none;" data-i18n="saveThisVideo">
           💾 Save This Video
         </button>
-        <button class="btn-action" id="save-url-btn">
+        <button class="btn-action" id="save-url-btn" data-i18n="saveUrl">
           ➕ Save URL
         </button>
-        <button class="btn-action" id="bookmark-btn">
+        <button class="btn-action" id="bookmark-btn" data-i18n="bookmark">
           🔖 Bookmark
         </button>
-        <button class="btn-action" id="open-library-btn">
+        <button class="btn-action" id="open-library-btn" data-i18n="openLibrary">
           📚 Open Library
         </button>
       </div>
@@ -94,7 +95,7 @@
       <!-- User Info -->
       <div class="user-info">
         <span id="user-email"></span>
-        <button class="btn-link" id="signout-btn">Sign Out</button>
+        <button class="btn-link" id="signout-btn" data-i18n="signOut">Sign Out</button>
       </div>
     </div>
   </div>

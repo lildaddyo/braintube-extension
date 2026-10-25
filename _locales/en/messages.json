@@ -1,0 +1,386 @@
+{
+  "htmlLang": {
+    "message": "en"
+  },
+  "extName": {
+    "message": "BrainTube - YouTube Knowledge Base"
+  },
+  "extDescription": {
+    "message": "Save YouTube videos, get AI summaries, and search your knowledge base."
+  },
+  "saveToBrainTube": {
+    "message": "Save to BrainTube"
+  },
+  "loadingDots": {
+    "message": "Loading..."
+  },
+  "signInTitle": {
+    "message": "Sign in to BrainTube"
+  },
+  "emailPlaceholder": {
+    "message": "Email"
+  },
+  "passwordPlaceholder": {
+    "message": "Password"
+  },
+  "signIn": {
+    "message": "Sign In"
+  },
+  "or": {
+    "message": "or"
+  },
+  "signInWithGoogle": {
+    "message": "Sign in with Google"
+  },
+  "searchPlaceholder": {
+    "message": "Search your library..."
+  },
+  "currentVideo": {
+    "message": "Current Video"
+  },
+  "viewNote": {
+    "message": "View Note"
+  },
+  "aiChat": {
+    "message": "AI Chat"
+  },
+  "aiConversation": {
+    "message": "AI Conversation"
+  },
+  "claudeConversation": {
+    "message": "Claude.ai Conversation"
+  },
+  "chatgptConversation": {
+    "message": "ChatGPT Conversation"
+  },
+  "saveConversation": {
+    "message": "💾 Save Conversation"
+  },
+  "saveThisVideo": {
+    "message": "💾 Save This Video"
+  },
+  "saveUrl": {
+    "message": "➕ Save URL"
+  },
+  "bookmark": {
+    "message": "🔖 Bookmark"
+  },
+  "openLibrary": {
+    "message": "📚 Open Library"
+  },
+  "signOut": {
+    "message": "Sign Out"
+  },
+  "userFallback": {
+    "message": "User"
+  },
+  "statusProcessingDots": {
+    "message": "🟡 Processing..."
+  },
+  "statusNeedsSummary": {
+    "message": "🟡 Needs Summary"
+  },
+  "statusReady": {
+    "message": "🟢 Ready"
+  },
+  "statusError": {
+    "message": "🔴 Error"
+  },
+  "savingEllipsis": {
+    "message": "⏳ Saving…"
+  },
+  "summarisingOnServer": {
+    "message": "Summarising on BrainTube server…"
+  },
+  "savedBang": {
+    "message": "✅ Saved!"
+  },
+  "convSavedNoText": {
+    "message": "\"$TITLE$\" saved (reload the page and try again to capture full text)",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "urlSavedToBrainTube": {
+    "message": "URL saved to BrainTube"
+  },
+  "convSaved": {
+    "message": "Conversation saved to BrainTube"
+  },
+  "signInFirstArrow": {
+    "message": "Sign in to BrainTube first ↑"
+  },
+  "sessionExpired": {
+    "message": "Session expired — sign out and back in"
+  },
+  "saveFailedRetry": {
+    "message": "Save failed — please try again"
+  },
+  "enterEmailPassword": {
+    "message": "Please enter email and password"
+  },
+  "signingIn": {
+    "message": "Signing in..."
+  },
+  "signInFailed": {
+    "message": "Sign in failed"
+  },
+  "openingGoogle": {
+    "message": "⏳ Opening Google sign-in…"
+  },
+  "verifying": {
+    "message": "⏳ Verifying…"
+  },
+  "signInCancelled": {
+    "message": "Sign-in was cancelled"
+  },
+  "signInFailedDetail": {
+    "message": "Sign-in failed: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "notSignedIn": {
+    "message": "Not signed in — please sign in first"
+  },
+  "savingDots": {
+    "message": "💾 Saving..."
+  },
+  "videoSaved": {
+    "message": "Video saved! Processing started."
+  },
+  "failedSaveVideo": {
+    "message": "Failed to save video"
+  },
+  "cannotReadTab": {
+    "message": "Could not read current tab URL"
+  },
+  "alreadySavedBtn": {
+    "message": "✓ Already saved"
+  },
+  "alreadyInLibrary": {
+    "message": "Already in your library"
+  },
+  "serverSlow": {
+    "message": "The server is slow — the page will appear in your library shortly."
+  },
+  "bookmarkedToast": {
+    "message": "Bookmarked! Find it in the 🔖 Saved tab."
+  },
+  "savedSummarySoon": {
+    "message": "Saved! The summary will be ready in a minute."
+  },
+  "saveFailed": {
+    "message": "Save failed"
+  },
+  "errorBtn": {
+    "message": "❌ Error"
+  },
+  "savedCheck": {
+    "message": "✓ Saved!"
+  },
+  "bookmarkedCheck": {
+    "message": "✓ Bookmarked!"
+  },
+  "sidePanelTitle": {
+    "message": "BrainTube Side Panel"
+  },
+  "tabChat": {
+    "message": "💬 Chat"
+  },
+  "tabSummary": {
+    "message": "📝 Summary"
+  },
+  "tabTranscript": {
+    "message": "📄 Transcript"
+  },
+  "tabHighlights": {
+    "message": "✨ Highlights"
+  },
+  "tabSaved": {
+    "message": "🔖 Saved"
+  },
+  "videoNotInLibrary": {
+    "message": "Video not in library"
+  },
+  "saveToUnlock": {
+    "message": "Save this video to unlock AI features"
+  },
+  "modeThisVideo": {
+    "message": "📹 This video"
+  },
+  "modeAllKnowledge": {
+    "message": "🧠 All my knowledge"
+  },
+  "askVideoPlaceholder": {
+    "message": "Ask anything about this video..."
+  },
+  "askCorpusPlaceholder": {
+    "message": "Ask across everything you've saved..."
+  },
+  "send": {
+    "message": "Send"
+  },
+  "tagsPlaceholder": {
+    "message": "Tags (comma-separated, optional)"
+  },
+  "bookmarkThisPage": {
+    "message": "🔖 Bookmark this page"
+  },
+  "filterUnread": {
+    "message": "Unread"
+  },
+  "filterRead": {
+    "message": "Read"
+  },
+  "filterAll": {
+    "message": "All"
+  },
+  "pleaseSignIn": {
+    "message": "Please sign in to use BrainTube"
+  },
+  "openYouTubeVideo": {
+    "message": "Open a YouTube video to use this feature"
+  },
+  "youtubeVideo": {
+    "message": "YouTube Video"
+  },
+  "failedLoadVideo": {
+    "message": "Failed to load video data"
+  },
+  "statusProcessing": {
+    "message": "🟡 Processing"
+  },
+  "generateSummary": {
+    "message": "🤖 Generate AI Summary"
+  },
+  "summaryHeading": {
+    "message": "Summary"
+  },
+  "keyTakeaways": {
+    "message": "Key Takeaways"
+  },
+  "processingBtn": {
+    "message": "⏳ Processing..."
+  },
+  "startedRefresh": {
+    "message": "✅ Started! Refresh in a minute"
+  },
+  "failedTryAgain": {
+    "message": "❌ Failed — try again"
+  },
+  "noTranscript": {
+    "message": "No transcript available"
+  },
+  "noHighlights": {
+    "message": "No highlights yet"
+  },
+  "greetItem": {
+    "message": "👋 Hi! Ask me anything about this video!"
+  },
+  "greetCorpus": {
+    "message": "🧠 Ask me anything across your entire saved knowledge base!"
+  },
+  "stillProcessingNote": {
+    "message": "⚠️ Note: This video is still processing. Chat will work once it's indexed."
+  },
+  "stillProcessingWait": {
+    "message": "⏳ This video is still processing. Please wait until it's indexed before chatting."
+  },
+  "thinking": {
+    "message": "💭 Thinking..."
+  },
+  "justNow": {
+    "message": "just now"
+  },
+  "minutesAgo": {
+    "message": "$COUNT$m ago",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "hoursAgo": {
+    "message": "$COUNT$h ago",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "daysAgo": {
+    "message": "$COUNT$d ago",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "loadingEllipsis": {
+    "message": "Loading…"
+  },
+  "failedLoadBookmarks": {
+    "message": "Failed to load bookmarks."
+  },
+  "emptyUnread": {
+    "message": "No unread bookmarks yet."
+  },
+  "emptyRead": {
+    "message": "No read bookmarks yet."
+  },
+  "emptyAll": {
+    "message": "No bookmarks yet."
+  },
+  "saveForLaterHint": {
+    "message": "Save pages for later using the button above."
+  },
+  "markUnread": {
+    "message": "Mark unread"
+  },
+  "markRead": {
+    "message": "Mark as read"
+  },
+  "removeBookmark": {
+    "message": "Remove bookmark"
+  },
+  "signInFirstWarn": {
+    "message": "⚠️ Sign in first"
+  },
+  "authPageTitle": {
+    "message": "BrainTube – Signing in…"
+  },
+  "connectingGoogle": {
+    "message": "Connecting to Google…"
+  },
+  "waitingGoogle": {
+    "message": "Waiting for Google sign-in…"
+  },
+  "signInCancelledTab": {
+    "message": "Sign-in cancelled or failed. You can close this tab."
+  },
+  "signingInToBrainTube": {
+    "message": "Signing in to BrainTube…"
+  },
+  "saveTimedOut": {
+    "message": "Video save timed out after 30 seconds. The server may be busy — try again."
+  },
+  "chatUnavailable": {
+    "message": "Chat unavailable — please try again in a moment."
+  },
+  "chatUnavailableStatus": {
+    "message": "Chat unavailable ($STATUS$)",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "pageCannotBeSaved": {
+    "message": "This page cannot be saved"
+  }
+}

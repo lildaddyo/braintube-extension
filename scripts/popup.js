@@ -4,6 +4,9 @@ import { processYouTube, getItem, trackEvent, saveUrl } from './api.js';
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getValidSession as getStorageSession } from './config.js';
+import { t, localizePage } from './i18n.js';
+
+localizePage();
 
 // Google OAuth client ID — must match Google Cloud Console + Supabase provider config.
 // Redirect URI: chrome.identity.getRedirectURL() (no suffix).
@@ -16,11 +19,11 @@ const GOOGLE_BTN_INNER = `
     <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
     <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
   </svg>
-  Sign in with Google`;
+  ${t('signInWithGoogle')}`;
 
 const AI_HOSTS = {
-  'claude.ai':   { label: 'Claude.ai Conversation', platform: 'claude' },
-  'chatgpt.com': { label: 'ChatGPT Conversation',   platform: 'chatgpt' },
+  'claude.ai':   { label: t('claudeConversation'), platform: 'claude' },
+  'chatgpt.com': { label: t('chatgptConversation'), platform: 'chatgpt' },
 };
 
 // DOM Elements
@@ -103,7 +106,7 @@ async function showMainSection(session) {
   setTimeout(() => { openLibraryBtn.disabled = false; }, 800);
 
   const user = await getCurrentUser();
-  userEmail.textContent = user?.email || 'User';
+  userEmail.textContent = user?.email || t('userFallback');
 
   await trackEvent('extension_opened');
 }
@@ -152,10 +155,10 @@ async function loadCurrentVideo() {
       
       // Show status
       const statusMap = {
-        [CONFIG.STATUS.PROCESSING]: '🟡 Processing...',
-        [CONFIG.STATUS.NEEDS_SUMMARY]: '🟡 Needs Summary',
-        [CONFIG.STATUS.INDEXED]: '🟢 Ready',
-        [CONFIG.STATUS.ERROR]: '🔴 Error'
+        [CONFIG.STATUS.PROCESSING]: t('statusProcessingDots'),
+        [CONFIG.STATUS.NEEDS_SUMMARY]: t('statusNeedsSummary'),
+        [CONFIG.STATUS.INDEXED]: t('statusReady'),
+        [CONFIG.STATUS.ERROR]: t('statusError')
       };
       videoStatus.textContent = statusMap[item.status] || item.status;
       videoStatus.className = `video-status status-${item.status}`;
@@ -178,8 +181,8 @@ async function handleSaveConversation(tabId, platform) {
   const status = document.getElementById('ai-save-status');
 
   btn.disabled       = true;
-  btn.textContent    = '⏳ Saving…';
-  status.textContent = 'Summarising on BrainTube server…';
+  btn.textContent    = t('savingEllipsis');
+  status.textContent = t('summarisingOnServer');
 
   try {
     const resp = await chrome.runtime.sendMessage({
@@ -189,37 +192,37 @@ async function handleSaveConversation(tabId, platform) {
     });
 
     if (resp?.ok) {
-      btn.textContent = '✅ Saved!';
+      btn.textContent = t('savedBang');
       if (resp.fallback) {
         // Content script couldn't extract text — URL + title saved as reference.
         status.textContent = resp.title
-          ? `"${resp.title}" saved (reload the page and try again to capture full text)`
-          : 'URL saved to BrainTube';
+          ? t('convSavedNoText', resp.title)
+          : t('urlSavedToBrainTube');
       } else {
-        status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+        status.textContent = resp.title ? `"${resp.title}"` : t('convSaved');
       }
     } else {
       const msg = resp?.error ?? '';
       if (msg === 'NOT_LOGGED_IN') {
-        status.textContent = 'Sign in to BrainTube first ↑';
+        status.textContent = t('signInFirstArrow');
       } else if (msg === 'SESSION_EXPIRED') {
-        status.textContent = 'Session expired — sign out and back in';
+        status.textContent = t('sessionExpired');
       } else {
         // Never surface raw Chrome internal error strings (e.g. "Could not
         // establish connection. Receiving end does not exist."). Show a
         // generic retry prompt instead.
-        status.textContent = 'Save failed — please try again';
+        status.textContent = t('saveFailedRetry');
       }
       btn.disabled    = false;
-      btn.textContent = '💾 Save Conversation';
+      btn.textContent = t('saveConversation');
     }
   } catch (err) {
     // chrome.runtime.sendMessage can throw when the service worker is not yet
     // active. Hide the raw technical message from the user.
     console.error('[BrainTube] handleSaveConversation error:', err);
-    status.textContent = 'Save failed — please try again';
+    status.textContent = t('saveFailedRetry');
     btn.disabled    = false;
-    btn.textContent = '💾 Save Conversation';
+    btn.textContent = t('saveConversation');
   }
 }
 
@@ -229,22 +232,22 @@ async function handleSignIn() {
   const password = passwordInput.value.trim();
   
   if (!email || !password) {
-    showAuthError('Please enter email and password');
+    showAuthError(t('enterEmailPassword'));
     return;
   }
   showAuthError('');
 
   signinBtn.disabled = true;
-  signinBtn.textContent = 'Signing in...';
+  signinBtn.textContent = t('signingIn');
 
   try {
     const session = await signIn(email, password);
     await showMainSection(session);
     await loadCurrentVideo();
   } catch (error) {
-    showAuthError(error.message || 'Sign in failed');
+    showAuthError(error.message || t('signInFailed'));
     signinBtn.disabled = false;
-    signinBtn.textContent = 'Sign In';
+    signinBtn.textContent = t('signIn');
   }
 }
 
@@ -255,7 +258,7 @@ async function handleSignIn() {
 async function handleGoogleSignIn() {
   showAuthError('');
   googleSigninBtn.disabled = true;
-  googleSigninBtn.textContent = '⏳ Opening Google sign-in…';
+  googleSigninBtn.textContent = t('openingGoogle');
 
   try {
     // chrome.identity.getRedirectURL() returns the canonical chromiumapp.org
@@ -312,7 +315,7 @@ async function handleGoogleSignIn() {
       throw new Error(err);
     }
 
-    googleSigninBtn.textContent = '⏳ Verifying…';
+    googleSigninBtn.textContent = t('verifying');
 
     // Exchange id_token for a Supabase session — pure fetch, no browser redirect.
     const res = await fetch(
@@ -359,7 +362,7 @@ async function handleGoogleSignIn() {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[BrainTube] Google sign-in failed:', msg);
     showAuthError(
-      msg.toLowerCase().includes('cancel') ? 'Sign-in was cancelled' : `Sign-in failed: ${msg}`
+      msg.toLowerCase().includes('cancel') ? t('signInCancelled') : t('signInFailedDetail', msg)
     );
   } finally {
     googleSigninBtn.disabled = false;
@@ -374,12 +377,12 @@ async function handleSaveVideo() {
   // Pre-flight session check — surface 401 cause immediately
   const session = await getStorageSession();
   if (!session?.access_token) {
-    showToast('Not signed in — please sign in first', true);
+    showToast(t('notSignedIn'), true);
     return;
   }
 
   saveVideoBtn.disabled = true;
-  saveVideoBtn.textContent = '💾 Saving...';
+  saveVideoBtn.textContent = t('savingDots');
   
   try {
     await processYouTube(currentVideo.url, currentVideo.videoId, currentVideo.isYouTubeMusic ? { isYouTubeMusic: true } : {});
@@ -389,12 +392,12 @@ async function handleSaveVideo() {
     });
 
     saveVideoBtn.textContent = '✅ Saved!';
-    showToast('Video saved! Processing started.');
+    showToast(t('videoSaved'));
     await loadCurrentVideo();
   } catch (error) {
-    showToast(error.message || 'Failed to save video', true);
+    showToast(error.message || t('failedSaveVideo'), true);
     saveVideoBtn.disabled = false;
-    saveVideoBtn.textContent = '💾 Save This Video';
+    saveVideoBtn.textContent = t('saveThisVideo');
   }
 }
 
@@ -402,7 +405,7 @@ async function handleSaveVideo() {
 // text goes along as a fallback for pages the server cannot read.
 async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+  if (!tab?.url) { showToast(t('cannotReadTab'), true); return; }
 
   btn.disabled = true;
   btn.textContent = busyLabel;
@@ -410,29 +413,29 @@ async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }
 
   try {
     const session = await getStorageSession();
-    if (!session?.access_token) throw new Error('Not signed in — please sign in first');
+    if (!session?.access_token) throw new Error(t('notSignedIn'));
     const page = await readTabPage(tab.id);
     const res = await saveUrl(tab.url, { bookmark, page });
-    btn.textContent = res.duplicate ? '✓ Already saved' : doneLabel;
+    btn.textContent = res.duplicate ? t('alreadySavedBtn') : doneLabel;
     showToast(res.duplicate
-      ? 'Already in your library'
-      : res.slow ? 'The server is slow — the page will appear in your library shortly.'
-      : bookmark ? 'Bookmarked! Find it in the 🔖 Saved tab.' : 'Saved! The summary will be ready in a minute.');
+      ? t('alreadyInLibrary')
+      : res.slow ? t('serverSlow')
+      : bookmark ? t('bookmarkedToast') : t('savedSummarySoon'));
     trackEvent(bookmark ? 'extension_bookmark_saved' : 'extension_page_saved', { source_type: res.sourceType, duplicate: res.duplicate, page_text: !!page?.text });
     reset();
   } catch (err) {
-    showToast(err.message || 'Save failed', true);
-    btn.textContent = '❌ Error';
+    showToast(err.message || t('saveFailed'), true);
+    btn.textContent = t('errorBtn');
     reset();
   }
 }
 
 function handleSaveUrl() {
-  return saveCurrentTab(saveUrlBtn, { bookmark: false, idleLabel: '➕ Save URL', busyLabel: '⏳ Saving…', doneLabel: '✓ Saved!' });
+  return saveCurrentTab(saveUrlBtn, { bookmark: false, idleLabel: t('saveUrl'), busyLabel: t('savingEllipsis'), doneLabel: t('savedCheck') });
 }
 
 function handleBookmark() {
-  return saveCurrentTab(bookmarkBtn, { bookmark: true, idleLabel: '🔖 Bookmark', busyLabel: '⏳ Saving…', doneLabel: '✓ Bookmarked!' });
+  return saveCurrentTab(bookmarkBtn, { bookmark: true, idleLabel: t('bookmark'), busyLabel: t('savingEllipsis'), doneLabel: t('bookmarkedCheck') });
 }
 
 // Event Listeners

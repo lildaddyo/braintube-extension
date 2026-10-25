@@ -17,6 +17,10 @@ const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.goo
 const statusEl  = document.getElementById('status');
 const spinnerEl = document.getElementById('spinner');
 
+document.documentElement.lang = chrome.i18n.getMessage('htmlLang') || 'en';
+document.title       = chrome.i18n.getMessage('authPageTitle') || document.title;
+statusEl.textContent = chrome.i18n.getMessage('connectingGoogle') || statusEl.textContent;
+
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg;
   if (isError) {
@@ -64,7 +68,7 @@ async function runGoogleAuth() {
   url.searchParams.set('nonce',         hashedNonce); // hashed → Google embeds in JWT
 
   console.log('[BrainTube] Google OAuth URL (no secret):', url.origin + url.pathname + '?client_id=...&response_type=id_token&redirect_uri=' + redirectUri);
-  setStatus('Waiting for Google sign-in…');
+  setStatus(chrome.i18n.getMessage('waitingGoogle'));
 
   chrome.identity.launchWebAuthFlow(
     { url: url.href, interactive: true },
@@ -72,7 +76,7 @@ async function runGoogleAuth() {
       if (chrome.runtime.lastError || !redirectedTo) {
         const err = chrome.runtime.lastError?.message ?? 'Sign-in cancelled';
         console.error('[BrainTube] launchWebAuthFlow error:', err);
-        setStatus('Sign-in cancelled or failed. You can close this tab.', true);
+        setStatus(chrome.i18n.getMessage('signInCancelledTab'), true);
         return;
       }
 
@@ -91,11 +95,11 @@ async function runGoogleAuth() {
       if (!idToken) {
         const err = params.get('error') ?? 'id_token not found in redirect hash';
         console.error('[BrainTube] Could not extract id_token. hash params:', Array.from(params.keys()));
-        setStatus(`Sign-in failed: ${err}`, true);
+        setStatus(chrome.i18n.getMessage('signInFailedDetail', [String(err)]), true);
         return;
       }
 
-      setStatus('Signing in to BrainTube…');
+      setStatus(chrome.i18n.getMessage('signingInToBrainTube'));
 
       try {
         // Exchange the Google id_token for a Supabase session.
@@ -155,7 +159,7 @@ async function runGoogleAuth() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[BrainTube] Token exchange failed:', msg);
-        setStatus(`Sign-in failed: ${msg}`, true);
+        setStatus(chrome.i18n.getMessage('signInFailedDetail', [String(msg)]), true);
       }
     }
   );
