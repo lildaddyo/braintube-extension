@@ -14,6 +14,8 @@ export const CONFIG = {
     CHAT: '/functions/v1/chat',
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
     TRACK: '/functions/v1/track',
+    PROCESS_CONTENT: '/functions/v1/process-content',
+    WHISPER_TRANSCRIBE: '/functions/v1/whisper-transcribe',
     
     // Direct database access
     REST: '/rest/v1',

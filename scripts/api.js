@@ -314,3 +314,42 @@ export async function createHighlight(itemId, userId, text, segmentId = null) {
   
   return await response.json();
 }
+
+// ── Instagram import ──────────────────────────────────────────────────────────
+
+class RateLimitError extends Error {
+  constructor(message, retryAfterMs) { super(message); this.retryAfterMs = retryAfterMs; }
+}
+export { RateLimitError };
+
+async function postJson(endpoint, body) {
+  const response = await fetch(buildUrl(endpoint), {
+    method: 'POST',
+    headers: await getHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 429) {
+    const retryAfter = Number(response.headers.get('retry-after')) || 60;
+    throw new RateLimitError(data.error || 'Rate limited', retryAfter * 1000);
+  }
+  if (response.status === 401) throw new Error('SESSION_EXPIRED');
+  if (!response.ok) throw new Error(data.error || `Server error ${response.status}`);
+  return data;
+}
+
+// Speech-to-text for a reel's audio track (charged to the user's voice allowance).
+export async function transcribeAudio(audioBase64, mimeType) {
+  const data = await postJson(CONFIG.ENDPOINTS.WHISPER_TRANSCRIBE, { audio_base64: audioBase64, mime_type: mimeType });
+  return data.text || '';
+}
+
+// Save a link; caption goes in as page text, the speech transcript as media_transcript.
+export async function processContent({ url, title, text, mediaTranscript }) {
+  return postJson(CONFIG.ENDPOINTS.PROCESS_CONTENT, {
+    url,
+    page_title: title,
+    page_text: text,
+    media_transcript: mediaTranscript,
+  });
+}

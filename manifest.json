@@ -3,7 +3,7 @@
   "name": "BrainTube - YouTube Knowledge Base",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAplZZ1KBlmEJe4lwlX0PvUID8+S/IOD6L9kkY1veeiFoRLMrpKeLdUNzvQMfJp1BdYih336fs9e+j7EOoUZHGofbeVQLdMwdsHRW01kAbSEghCcvgPqWs3jpsIVfBFZTjQIFCRJWlfIoXv/R/NjZjcckEQjyEvx/2v30VO6Vl2gk9iKbr5qehyv3euKHkbAsr2pYlRuAlpXr0VlH8gT2Dc7XykIeQTCBsL+SqCYWqUb12r6ljzB9Uhxfwt616t8KojHMjtxweRAag3X5Lw5qdu8p2lEltldT/rDHHVDZiMuujniFWMPqyWO7tfMl4RiDeYdNW1dotN69eM3sctVL3EQIDAQAB",
   "version": "1.0.0",
-  "description": "Save YouTube videos, get AI summaries, and search your knowledge base.",
+  "description": "Save YouTube videos and Instagram reels, get AI summaries, and search your knowledge base.",
   "permissions": [
     "activeTab",
     "storage",
@@ -19,7 +19,10 @@
     "https://pmwuwzoqnhqqqseddzes.supabase.co/*",
     "https://claude.ai/*",
     "https://chatgpt.com/*",
-    "https://braintube-mcp-production.up.railway.app/*"
+    "https://braintube-mcp-production.up.railway.app/*",
+    "https://www.instagram.com/*",
+    "https://*.fbcdn.net/*",
+    "https://iqjnmmtvhyavgrsxpoao.supabase.co/*"
   ],
   "background": {
     "service_worker": "scripts/service-worker.js",
@@ -36,14 +39,44 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://www.youtube.com/watch*"],
-      "js": ["scripts/content-script.js"],
-      "css": ["styles/content-styles.css"],
+      "matches": [
+        "*://www.youtube.com/watch*"
+      ],
+      "js": [
+        "scripts/content-script.js"
+      ],
+      "css": [
+        "styles/content-styles.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/*", "https://chatgpt.com/*"],
-      "js": ["scripts/ai-capture.js"],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "scripts/ai-capture.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "scripts/ig-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "scripts/ig-import.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -58,13 +91,22 @@
   },
   "oauth2": {
     "client_id": "605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
   },
-
   "web_accessible_resources": [
     {
-      "resources": ["icons/*"],
-      "matches": ["*://www.youtube.com/*", "https://claude.ai/*", "https://chatgpt.com/*"]
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "*://www.youtube.com/*",
+        "https://claude.ai/*",
+        "https://chatgpt.com/*"
+      ]
     }
   ]
 }
