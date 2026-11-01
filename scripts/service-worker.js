@@ -1,6 +1,7 @@
 // BrainTube Extension - Service Worker
 import { trackEvent } from './api.js';
 import { CONFIG, getValidSession } from './config.js';
+import { captureContentLanguage } from './content-language.js';
 
 console.log('🧠 BrainTube service worker started');
 
@@ -34,8 +35,14 @@ async function reportPendingInstall() {
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.bt_session && changes.bt_session.newValue) reportPendingInstall();
+  if (area === 'local' && changes.bt_session && changes.bt_session.newValue) {
+    reportPendingInstall();
+    captureContentLanguage(changes.bt_session.newValue);
+  }
 });
+
+// An account already signed in when this version starts: the same once-per-account capture.
+chrome.storage.local.get('bt_session').then(({ bt_session: session }) => captureContentLanguage(session));
 
 // Context menu handler
 chrome.contextMenus.onClicked.addListener((info, tab) => {
