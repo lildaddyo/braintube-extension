@@ -3,7 +3,7 @@ import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
 import { processYouTube, getItem, trackEvent, saveUrl } from './api.js';
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
-import { CONFIG, getValidSession as getStorageSession } from './config.js';
+import { CONFIG, SESSION_KEY, saveSession, getValidSession as getStorageSession } from './config.js';
 import { t, localizePage } from './i18n.js';
 
 localizePage();
@@ -51,6 +51,7 @@ const bookmarkBtn = document.getElementById('bookmark-btn');
 const openLibraryBtn = document.getElementById('open-library-btn');
 
 let currentVideo = null;
+let signingInHere = false; // the popup's own sign-in updates the UI itself
 
 // ── Toast / error helpers ──────────────────────────────────────────────────────
 const toastEl     = document.getElementById('toast');
@@ -241,6 +242,7 @@ async function handleSignIn() {
   signinBtn.textContent = t('signingIn');
 
   try {
+    signingInHere = true;
     const session = await signIn(email, password);
     await showMainSection(session);
     await loadCurrentVideo();
@@ -248,6 +250,8 @@ async function handleSignIn() {
     showAuthError(error.message || t('signInFailed'));
     signinBtn.disabled = false;
     signinBtn.textContent = t('signIn');
+  } finally {
+    signingInHere = false;
   }
 }
 
@@ -259,6 +263,7 @@ async function handleGoogleSignIn() {
   showAuthError('');
   googleSigninBtn.disabled = true;
   googleSigninBtn.textContent = t('openingGoogle');
+  signingInHere = true;
 
   try {
     // chrome.identity.getRedirectURL() returns the canonical chromiumapp.org
@@ -350,8 +355,7 @@ async function handleGoogleSignIn() {
       user:          data.user,
     };
 
-    // Write both keys so getHeaders() in config.js always finds the token.
-    await chrome.storage.local.set({ bt_session: session, session: session });
+    await saveSession(session);
     console.log('✅ Google sign-in complete');
 
     // Update popup UI inline — no tab switch, no storage.onChanged needed.
@@ -365,6 +369,7 @@ async function handleGoogleSignIn() {
       msg.toLowerCase().includes('cancel') ? t('signInCancelled') : t('signInFailedDetail', msg)
     );
   } finally {
+    signingInHere = false;
     googleSigninBtn.disabled = false;
     googleSigninBtn.innerHTML = GOOGLE_BTN_INNER;
   }
@@ -447,13 +452,13 @@ passwordInput.addEventListener('keypress', (e) => {
 // OAuth runs directly in the popup via launchWebAuthFlow — no auth.html tab opened.
 googleSigninBtn.addEventListener('click', handleGoogleSignIn);
 
-// Fallback: if bt_session is set by another code path (e.g. a future background
-// flow), update the popup UI. Not triggered by the Google sign-in above since
-// that path calls showMainSection() directly after the token exchange.
+// Fallback: a sign-in finished by another extension page (auth.html) updates the popup UI. Skipped for the
+// sign-ins above, which call showMainSection() themselves, and for token refreshes (oldValue set).
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.bt_session?.newValue) {
-    console.log('[BrainTube] popup: bt_session set externally — updating UI');
-    showMainSection(changes.bt_session.newValue).then(() => loadCurrentVideo());
+  if (signingInHere) return;
+  if (area === 'session' && changes[SESSION_KEY]?.newValue && !changes[SESSION_KEY].oldValue) {
+    console.log('[BrainTube] popup: session set externally — updating UI');
+    showMainSection(changes[SESSION_KEY].newValue).then(() => loadCurrentVideo());
   }
 });
 

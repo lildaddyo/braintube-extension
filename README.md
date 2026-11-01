@@ -91,8 +91,22 @@ braintube-extension-v2/
 
 ### 1. Authentication
 - Direct sign-in with email/password
-- Session stored securely in Chrome storage
+- Session (access + refresh token) kept in `chrome.storage.session` under one key (`bt_session`), locked to
+  extension pages and the service worker (content scripts cannot read it); it is cleared when the browser quits,
+  so users sign in again after a browser restart. Sessions left in `chrome.storage.local` by v1.6.1 and older
+  are moved there on first read and deleted.
 - Auto-validates on startup
+
+### Security model (v1.7.0, audit 2026-11-01)
+- **Runtime messages**: `scripts/message-guard.js` lists which sender may send each message type. Privileged
+  actions (save an AI conversation, open the side panel) come only from extension pages; YouTube events come
+  only from our content script in the top frame of www.youtube.com, and the tab is taken from `sender.tab`.
+- **Playlist sync**: `content-playlist-watcher.js` (isolated world) asks the service worker to inject
+  `installPlaylistShim(nonce)` (MAIN world) with a per-load nonce passed as an `executeScript` argument. The shim
+  hands back a `MessagePort` in one nonce-checked handshake; only that port is trusted. Ids must be user
+  playlists (`PL…`), a trusted user input must precede the add by at most 15 s, and both sides rate-limit.
+- **AI capture** is not a content script: `ai-capture.js` is injected on the "Save Conversation" click through
+  `activeTab`, so the extension has no standing access to claude.ai or chatgpt.com.
 
 ### 2. Video Detection
 - Automatically detects when you're on a YouTube video
@@ -172,8 +186,8 @@ Four powerful tabs:
 
 ## 🔑 Environment
 
-- **API Base**: https://pmwuwzoqnhqqqseddzes.supabase.co
-- **Web App**: https://brain-tube.com
+- **API Base**: https://iqjnmmtvhyavgrsxpoao.supabase.co
+- **Web App**: https://app.brain-tube.com
 - **Manifest**: V3
 
 ## 💡 Pro Tips

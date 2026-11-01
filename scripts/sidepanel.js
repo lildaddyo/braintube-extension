@@ -437,7 +437,7 @@ function renderBookmarks(items) {
     el.innerHTML = `
       <img class="bookmark-favicon"
            src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain||'example.com')}&sz=16"
-           alt="" onerror="this.style.display='none'">
+           alt="">
       <div class="bookmark-body">
         <div class="bookmark-title" title="${escHtml(b.title)}">${escHtml(b.title)}</div>
         ${domain ? `<div class="bookmark-domain">${escHtml(domain)}</div>` : ''}
@@ -448,6 +448,9 @@ function renderBookmarks(items) {
         <button class="bm-action-btn bm-read-btn" title="${b.is_read ? t('markUnread') : t('markRead')}">${b.is_read?'↩':'✓'}</button>
         <button class="bm-action-btn bm-remove-btn" title="${t('removeBookmark')}">×</button>
       </div>`;
+
+    // CSP (script-src 'self') blocks inline handlers, so the favicon fallback is a listener.
+    el.querySelector('.bookmark-favicon').addEventListener('error', (e) => { e.currentTarget.style.display = 'none'; }, { once: true });
 
     el.querySelector('.bookmark-title').addEventListener('click', () => {
       // Only open web URLs; a stored javascript:, data: or chrome: URL is ignored.

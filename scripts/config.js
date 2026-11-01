@@ -75,10 +75,46 @@ export async function getHeaders() {
   };
 }
 
-// Helper to get the current session as stored — checks bt_session then session
+// ── Session storage (audit 2026-11-01, finding 3) ────────────────────────────────────────────────────────
+// The Supabase session (access + refresh token) lives in chrome.storage.session under one key, with access
+// level TRUSTED_CONTEXTS (the service worker sets it at start), so content scripts cannot read it; they ask
+// the service worker to make authenticated calls. storage.session survives service-worker restarts and is
+// kept in memory only, so it is gone when the browser quits: the user signs in again (Google or email) after
+// a browser restart. Older versions kept the session in chrome.storage.local under "session" and
+// "bt_session"; the first read moves it here and deletes those keys.
+export const SESSION_KEY = 'bt_session';
+const LEGACY_LOCAL_KEYS = ['session', 'bt_session'];
+
+/** Locks chrome.storage.session to extension pages and the service worker (content scripts excluded). */
+export async function lockSessionStorage() {
+  try { await chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }); } catch { /* default is already TRUSTED_CONTEXTS */ }
+}
+
+export async function saveSession(session) {
+  await chrome.storage.session.set({ [SESSION_KEY]: session });
+}
+
+export async function clearSession() {
+  await chrome.storage.session.remove(SESSION_KEY);
+  await chrome.storage.local.remove(LEGACY_LOCAL_KEYS);
+}
+
+// Moves a session left in chrome.storage.local by v1.6.1 or older into storage.session, once.
+export async function migrateLegacySession() {
+  const legacy = await chrome.storage.local.get(LEGACY_LOCAL_KEYS);
+  const session = legacy.bt_session || legacy.session || null;
+  if (Object.keys(legacy).length) await chrome.storage.local.remove(LEGACY_LOCAL_KEYS);
+  if (session?.access_token) {
+    await saveSession(session);
+    return session;
+  }
+  return null;
+}
+
+// The current session as stored (not refreshed), or null.
 export async function getSession() {
-  const stored = await chrome.storage.local.get(['bt_session', 'session']);
-  return stored.bt_session || stored.session || null;
+  const stored = await chrome.storage.session.get(SESSION_KEY);
+  return stored[SESSION_KEY] || await migrateLegacySession();
 }
 
 // Seconds-since-epoch expiry of a session's access token (JWT exp claim, else expires_at).
@@ -93,7 +129,7 @@ function tokenExpiry(session) {
 
 let refreshInFlight = null;
 
-// Exchange the refresh token for a new session and store it under both keys.
+// Exchange the refresh token for a new session and store it.
 // A rejected refresh token (revoked, or already rotated) clears the session so the UI asks to sign in again.
 export async function refreshSession(session) {
   if (!refreshInFlight) {
@@ -106,7 +142,7 @@ export async function refreshSession(session) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.access_token) {
         if (res.status >= 400 && res.status < 500) {
-          await chrome.storage.local.remove(['session', 'bt_session']);
+          await clearSession();
         }
         throw new Error('Session expired — please sign in again');
       }
@@ -118,7 +154,7 @@ export async function refreshSession(session) {
         token_type:    'bearer',
         user:          data.user || session.user,
       };
-      await chrome.storage.local.set({ bt_session: fresh, session: fresh });
+      await saveSession(fresh);
       return fresh;
     })().finally(() => { refreshInFlight = null; });
   }
@@ -131,7 +167,7 @@ export async function getValidSession() {
   if (!session?.access_token) return null;
   if (tokenExpiry(session) - Date.now() / 1000 > 60) return session;
   if (!session.refresh_token) {
-    await chrome.storage.local.remove(['session', 'bt_session']);
+    await clearSession();
     return null;
   }
   return refreshSession(session);
