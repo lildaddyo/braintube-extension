@@ -47,9 +47,22 @@ export const CONFIG = {
   }
 };
 
-// Helper to build full URL
+// The database region (eu-west-1, Ireland). Supabase runs an edge function in the region nearest the
+// caller unless told otherwise, so a call from Asia ran brain-chat and every function it calls far from
+// the database (p50 17-22 s vs 1.5 s, edge logs 2026-11-02). Same pin as the web app
+// (dark-n-cozy src/lib/function-region.ts): the query parameter, not the x-region header, which the
+// functions' CORS doesn't allow.
+export const FUNCTION_REGION = 'eu-west-1';
+
+// Adds forceFunctionRegion to an edge function URL that has none; any other URL comes back unchanged.
+export function pinFunctionUrl(url) {
+  if (!url.includes('/functions/v1/') || url.includes('forceFunctionRegion=')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}forceFunctionRegion=${FUNCTION_REGION}`;
+}
+
+// Helper to build full URL (edge functions pinned to the database region)
 export function buildUrl(endpoint) {
-  return `${CONFIG.SUPABASE_URL}${endpoint}`;
+  return pinFunctionUrl(`${CONFIG.SUPABASE_URL}${endpoint}`);
 }
 
 // Helper to get auth headers — uses a fresh (auto-refreshed) access token

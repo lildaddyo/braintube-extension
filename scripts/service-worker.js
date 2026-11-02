@@ -1,6 +1,6 @@
 // BrainTube Extension - Service Worker
 import { trackEvent } from './api.js';
-import { CONFIG, getValidSession } from './config.js';
+import { CONFIG, getValidSession, pinFunctionUrl } from './config.js';
 import { captureContentLanguage } from './content-language.js';
 
 console.log('🧠 BrainTube service worker started');
@@ -154,7 +154,7 @@ async function saveAiConversation(tabId, platform) {
 // ── Playlist sync ─────────────────────────────────────────────────────────────
 
 const SUPABASE_URL       = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
-const SYNC_PLAYLIST_URL  = `${SUPABASE_URL}/functions/v1/youtube-sync-playlist`;
+const SYNC_PLAYLIST_URL  = pinFunctionUrl(`${SUPABASE_URL}/functions/v1/youtube-sync-playlist`);
 
 async function syncPlaylist(youtubePlaylistId) {
   if (!youtubePlaylistId) return;
