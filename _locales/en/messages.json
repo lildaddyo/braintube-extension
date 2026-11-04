@@ -192,9 +192,6 @@
   "playlistSyncDisclosure": {
     "message": "While you are signed in, adding a video to one of your YouTube playlists also imports that playlist into your BrainTube library."
   },
-  "signInPerBrowserSession": {
-    "message": "For your security, BrainTube keeps you signed in until you quit the browser."
-  },
   "sidePanelTitle": {
     "message": "BrainTube Side Panel"
   },

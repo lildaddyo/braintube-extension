@@ -77,9 +77,6 @@ M = [
     ("playlistSyncDisclosure",
      "While you are signed in, adding a video to one of your YouTube playlists also imports that playlist into your BrainTube library.",
      "로그인한 동안 YouTube 재생목록에 영상을 추가하면 그 재생목록도 내 BrainTube 라이브러리로 가져와요."),
-    ("signInPerBrowserSession",
-     "For your security, BrainTube keeps you signed in until you quit the browser.",
-     "보안을 위해 브라우저를 종료하면 BrainTube에서 로그아웃돼요."),
 
     # side panel
     ("sidePanelTitle", "BrainTube Side Panel", "BrainTube 사이드 패널"),

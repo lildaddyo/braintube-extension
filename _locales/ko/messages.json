@@ -192,9 +192,6 @@
   "playlistSyncDisclosure": {
     "message": "로그인한 동안 YouTube 재생목록에 영상을 추가하면 그 재생목록도 내 BrainTube 라이브러리로 가져와요."
   },
-  "signInPerBrowserSession": {
-    "message": "보안을 위해 브라우저를 종료하면 BrainTube에서 로그아웃돼요."
-  },
   "sidePanelTitle": {
     "message": "BrainTube 사이드 패널"
   },

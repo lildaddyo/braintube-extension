@@ -3,7 +3,7 @@
 The website privacy policy (https://brain-tube.com/privacy and https://brain-tube.com/ko/privacy) is not in this
 repo. These are the changes the owner must make there, and in the Chrome Web Store dashboard, so that the
 disclosures match what the extension does. The in-repo copy (`store/LISTING.en.md`, `store/LISTING.ko.md`, popup
-strings `aiCaptureDisclosure`, `playlistSyncDisclosure`, `signInPerBrowserSession`) already says this.
+strings `aiCaptureDisclosure`, `playlistSyncDisclosure`) already says this.
 
 ## 1. Website privacy policy (en and ko)
 
@@ -25,8 +25,17 @@ strings `aiCaptureDisclosure`, `playlistSyncDisclosure`, `signInPerBrowserSessio
    > separate click on BrainTube. The extension does not record other YouTube activity.
 4. **What the extension reads when you save a page.** State that Save / Save URL / Bookmark send the tab's
    address and visible text (up to 60,000 characters) to the BrainTube server.
-5. **Sign-in data.** State that the extension keeps your sign-in session only in the browser's memory for the
-   current browser session (cleared when the browser quits) and does not make it available to web pages.
+5. **Sign-in data.** Add:
+   > The extension keeps your BrainTube sign-in on your computer so you stay signed in after restarting the
+   > browser: the short-lived access token in the browser's memory, and the refresh token encrypted in the
+   > extension's own storage. Web pages and the extension's scripts on other sites cannot read either. Signing
+   > out in the extension deletes both. The sign-in is used only to talk to BrainTube's servers.
+
+   Korean (ko/privacy):
+   > 확장 프로그램은 브라우저를 다시 시작해도 로그인 상태가 유지되도록 BrainTube 로그인 정보를 내 컴퓨터에
+   > 보관해요. 짧게 유효한 액세스 토큰은 브라우저 메모리에, 갱신 토큰은 암호화해서 확장 프로그램 전용 저장소에
+   > 보관해요. 웹페이지나 다른 사이트에서 실행되는 확장 프로그램 스크립트는 이 정보를 읽을 수 없어요.
+   > 확장 프로그램에서 로그아웃하면 둘 다 삭제돼요. 로그인 정보는 BrainTube 서버와 통신할 때만 사용해요.
 6. **Remove or qualify absolute claims** such as "we do not track your history" or "no third-party sharing":
    content is shared with the AI processors above, and playlist adds are observed in the background.
 
@@ -58,5 +67,6 @@ strings `aiCaptureDisclosure`, `playlistSyncDisclosure`, `signInPerBrowserSessio
 
 ## 4. User-visible change to announce
 
-Users are signed out when they quit the browser (tokens no longer persist in `chrome.storage.local`). Mention it
-in the release notes; the popup says so under the sign-in buttons.
+None for sign-in: users stay signed in across browser restarts, as in v1.6.x, and the v1.6.x session carries
+over on update. (An earlier draft signed users out on quit; D-212 reversed that.) Release-note line, if any:
+"Security update: tighter permissions, safer YouTube playlist sync, and your sign-in is now stored encrypted."

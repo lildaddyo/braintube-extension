@@ -92,9 +92,10 @@ braintube-extension-v2/
 ### 1. Authentication
 - Direct sign-in with email/password
 - Session (access + refresh token) kept in `chrome.storage.session` under one key (`bt_session`), locked to
-  extension pages and the service worker (content scripts cannot read it); it is cleared when the browser quits,
-  so users sign in again after a browser restart. Sessions left in `chrome.storage.local` by v1.6.1 and older
-  are moved there on first read and deleted.
+  extension pages and the service worker (content scripts cannot read it). The refresh token alone is also kept
+  in the extension origin's IndexedDB (`bt_auth`), AES-GCM encrypted with a non-extractable key, so a browser
+  restart signs the user back in; sign-out or a rejected refresh token deletes it. Sessions left in
+  `chrome.storage.local` by v1.6.1 and older are moved there on first read and deleted.
 - Auto-validates on startup
 
 ### Security model (v1.7.0, audit 2026-11-01)

@@ -69,7 +69,7 @@ YouTube playlist sync: while you are signed in, adding a video to one of your ow
 AI processing: summaries, chat and search use AI providers that process content on BrainTube's behalf: Anthropic, OpenAI and Google (Gemini).
 No browsing history: apart from the cases above, BrainTube does not record or send the pages you visit.
 No ads, and we don't sell your data. What you save is stored in your account only.
-You stay signed in until you quit the browser.
+Your sign-in stays on this computer until you sign out, and web pages cannot read it.
 Privacy policy: https://brain-tube.com/privacy
 
 🚀 Get started
