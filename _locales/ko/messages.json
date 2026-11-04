@@ -186,6 +186,12 @@
   "bookmarkedCheck": {
     "message": "✓ 북마크했어요!"
   },
+  "aiCaptureDisclosure": {
+    "message": "저장을 누를 때만 BrainTube가 이 페이지에서 대화를 읽어요. 대화 내용은 BrainTube 서버로 보내지고, Anthropic(Claude)이 요약해요."
+  },
+  "playlistSyncDisclosure": {
+    "message": "로그인한 동안 YouTube 재생목록에 영상을 추가하면 그 재생목록도 내 BrainTube 라이브러리로 가져와요."
+  },
   "sidePanelTitle": {
     "message": "BrainTube 사이드 패널"
   },

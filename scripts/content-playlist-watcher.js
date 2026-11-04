@@ -1,99 +1,70 @@
-// Isolated-world content script. Receives PLAYLIST_ADD postMessages from
-// page-world-shim.js and relays them to the service worker. Also runs a
-// MutationObserver fallback that watches for YouTube's "Saved to <Playlist>"
-// toast in case the network intercept misses.
+// BrainTube Extension - Isolated-world content script on www.youtube.com (top frame only).
+// When the signed-in user adds a video to one of their YouTube playlists, the service worker imports that
+// playlist into their BrainTube library (background playlist sync, disclosed in the store listing).
+//
+// Security (audit 2026-11-01, finding 1): see page-world-shim.js for the handshake. This script
+//   - makes a per-load nonce and asks the service worker to inject the MAIN-world shim with it,
+//   - accepts exactly one port handshake carrying that nonce, then adds only from that port,
+//   - drops ids that are not user playlists (PL + 16/32 chars), adds without a trusted user input
+//     (click, tap or key press) in the last 15 seconds, repeats within 5 s and more than 5 per minute.
+// The old DOM fallback (reading "Saved to <name>" toasts and data-id attributes) is gone: page scripts can
+// write any DOM they like, so it could not be trusted.
 
-'use strict';
+(() => {
+  'use strict';
 
-// Debounce map: playlistId → timestamp of last relay (ms).
-const _debounce = new Map();
-const DEBOUNCE_MS = 5000;
+  const PLAYLIST_ID     = /^PL[A-Za-z0-9_-]{16}(?:[A-Za-z0-9_-]{16})?$/;
+  const GESTURE_MS      = 15_000;
+  const COOLDOWN_MS     = 5_000;
+  const WINDOW_MS       = 60_000;
+  const MAX_PER_WINDOW  = 5;
 
-function shouldFire(playlistId) {
-  const last = _debounce.get(playlistId) || 0;
-  if (Date.now() - last < DEBOUNCE_MS) return false;
-  _debounce.set(playlistId, Date.now());
-  return true;
-}
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const nonce = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 
-function relay(playlistId) {
-  if (!shouldFire(playlistId)) return;
-  chrome.runtime.sendMessage({ type: 'PLAYLIST_ADD_EVENT', youtube_playlist_id: playlistId })
-    .catch(() => { /* service worker may be sleeping */ });
-}
+  let port = null;
+  let lastGesture = -Infinity;
+  const lastSent = new Map();
+  let sentStamps = [];
 
-// ── Network intercept path ───────────────────────────────────────────────────
-
-window.addEventListener('message', (evt) => {
-  if (evt.source !== window) return;
-  if (evt.data?.source !== 'BT' || evt.data?.type !== 'PLAYLIST_ADD') return;
-  const id = evt.data.playlistId;
-  if (id) relay(id);
-});
-
-// ── MutationObserver fallback ────────────────────────────────────────────────
-// Watch for YouTube's save-confirmation toast text in multiple languages.
-
-const TOAST_PREFIXES = [
-  'Saved to ',       // EN
-  'Guardado en ',    // ES
-  'Gespeichert in ', // DE
-  '\u0417\u0430\u043f\u0430\u0437\u0435\u043d\u043e \u0432 ', // BG: "Запазено в "
-];
-
-function extractPlaylistName(toastText) {
-  for (const prefix of TOAST_PREFIXES) {
-    if (toastText.startsWith(prefix)) {
-      return toastText.slice(prefix.length).replace(/\.$/, '').trim();
-    }
+  // isTrusted is set by the browser only for real user input; page scripts cannot fake it.
+  for (const type of ['pointerdown', 'keydown']) {
+    window.addEventListener(type, (e) => { if (e.isTrusted) lastGesture = Date.now(); }, { capture: true, passive: true });
   }
-  return null;
-}
 
-// Build a name→id map from the currently open playlist menu (if visible).
-function buildPlaylistIdMap() {
-  const map = new Map();
-  // YouTube renders playlist items with data-id or data-playlist-id attributes
-  const items = document.querySelectorAll('[data-id], [data-playlist-id]');
-  items.forEach(el => {
-    const id = el.getAttribute('data-id') || el.getAttribute('data-playlist-id');
-    if (!id || id === 'WL') return;
-    const label = el.getAttribute('aria-label') ||
-                  el.querySelector('[class*="label"], span')?.textContent?.trim() ||
-                  el.textContent?.trim();
-    if (label) map.set(label.toLowerCase(), id);
-  });
-  return map;
-}
+  function allow(id) {
+    const now = Date.now();
+    if (now - lastGesture > GESTURE_MS) return false;
+    if (now - (lastSent.get(id) ?? -Infinity) < COOLDOWN_MS) return false;
+    sentStamps = sentStamps.filter((s) => now - s < WINDOW_MS);
+    if (sentStamps.length >= MAX_PER_WINDOW) return false;
+    lastSent.set(id, now);
+    sentStamps.push(now);
+    return true;
+  }
 
-const observer = new MutationObserver(() => {
-  // YouTube toasts live inside #toast, ytd-toast-renderer, or tp-yt-paper-toast
-  const toasts = document.querySelectorAll(
-    '#toast, ytd-toast-renderer, tp-yt-paper-toast, [class*="toast"]'
-  );
+  function onPortMessage(evt) {
+    const data = evt.data;
+    if (!data || data.type !== 'PLAYLIST_ADD') return;
+    const id = data.playlistId;
+    if (typeof id !== 'string' || !PLAYLIST_ID.test(id)) return;
+    if (!allow(id)) return;
+    chrome.runtime.sendMessage({ type: 'PLAYLIST_ADD_EVENT', youtube_playlist_id: id })
+      .catch(() => { /* service worker restarting; the next add will sync */ });
+  }
 
-  toasts.forEach(toast => {
-    const text = toast.textContent?.trim() || '';
-    const playlistName = extractPlaylistName(text);
-    if (!playlistName) return;
+  function onHandshake(evt) {
+    if (evt.source !== window || port) return;
+    const data = evt.data;
+    if (!data || data.source !== 'BT' || data.type !== 'BT_PORT' || data.nonce !== nonce) return;
+    if (!evt.ports || evt.ports.length !== 1) return;
+    port = evt.ports[0];
+    window.removeEventListener('message', onHandshake, true);
+    port.onmessage = onPortMessage;
+  }
 
-    // Try to resolve name → id from the menu
-    const idMap = buildPlaylistIdMap();
-    const resolvedId = idMap.get(playlistName.toLowerCase());
-
-    if (resolvedId) {
-      relay(resolvedId);
-    } else {
-      // Name-only fallback — relay with a synthetic slug so the server can
-      // do a best-effort match. The service worker can filter/ignore these.
-      relay('name:' + playlistName);
-    }
-  });
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-  characterData: false,
-  attributes: false,
-});
+  window.addEventListener('message', onHandshake, true);
+  chrome.runtime.sendMessage({ type: 'INSTALL_PLAYLIST_SHIM', nonce })
+    .catch(() => { /* no shim this load: playlist adds are simply not detected */ });
+})();

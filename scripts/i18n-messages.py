@@ -70,6 +70,14 @@ M = [
     ("savedCheck", "✓ Saved!", "✓ 저장했어요!"),
     ("bookmarkedCheck", "✓ Bookmarked!", "✓ 북마크했어요!"),
 
+    # disclosures (security audit 2026-11-01, finding 5)
+    ("aiCaptureDisclosure",
+     "Only when you click Save, BrainTube reads this conversation from the page and sends its text to the BrainTube server, where Anthropic (Claude) summarises it.",
+     "저장을 누를 때만 BrainTube가 이 페이지에서 대화를 읽어요. 대화 내용은 BrainTube 서버로 보내지고, Anthropic(Claude)이 요약해요."),
+    ("playlistSyncDisclosure",
+     "While you are signed in, adding a video to one of your YouTube playlists also imports that playlist into your BrainTube library.",
+     "로그인한 동안 YouTube 재생목록에 영상을 추가하면 그 재생목록도 내 BrainTube 라이브러리로 가져와요."),
+
     # side panel
     ("sidePanelTitle", "BrainTube Side Panel", "BrainTube 사이드 패널"),
     ("tabChat", "💬 Chat", "💬 채팅"),

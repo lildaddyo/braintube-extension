@@ -186,6 +186,12 @@
   "bookmarkedCheck": {
     "message": "✓ Bookmarked!"
   },
+  "aiCaptureDisclosure": {
+    "message": "Only when you click Save, BrainTube reads this conversation from the page and sends its text to the BrainTube server, where Anthropic (Claude) summarises it."
+  },
+  "playlistSyncDisclosure": {
+    "message": "While you are signed in, adding a video to one of your YouTube playlists also imports that playlist into your BrainTube library."
+  },
   "sidePanelTitle": {
     "message": "BrainTube Side Panel"
   },
