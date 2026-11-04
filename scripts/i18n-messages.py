@@ -139,6 +139,16 @@ M = [
     ("chatUnavailable", "Chat unavailable — please try again in a moment.", "지금은 채팅을 쓸 수 없어요. 잠시 후 다시 시도해 주세요."),
     ("chatUnavailableStatus", "Chat unavailable ($STATUS$)", "지금은 채팅을 쓸 수 없어요 ($STATUS$)"),
     ("pageCannotBeSaved", "This page cannot be saved", "이 페이지는 저장할 수 없어요"),
+    # version gate (W2-5, scripts/app-gate.js); same copy as the iOS and Android apps
+    ("gateUpdateTitle", "Please update BrainTube", "BrainTube를 업데이트해 주세요"),
+    ("gateUpdateBody", "This version is no longer supported. Update to keep saving and asking your brain.",
+     "이 버전은 더 이상 지원되지 않아요. 계속 저장하고 질문하려면 업데이트해 주세요."),
+    ("gateUpdateButton", "Update", "업데이트"),
+    ("gatePausedTitle", "BrainTube is paused", "BrainTube가 잠시 멈췄어요"),
+    ("gatePausedBody", "We're fixing something on our side. Please try again in a little while.",
+     "문제를 고치고 있어요. 잠시 후 다시 시도해 주세요."),
+    ("gateAvailable", "A new version of BrainTube is available.", "BrainTube 새 버전이 나왔어요."),
+    ("gateClose", "Close", "닫기"),
 ]
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "_locales")

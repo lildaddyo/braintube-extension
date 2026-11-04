@@ -382,5 +382,26 @@
   },
   "pageCannotBeSaved": {
     "message": "이 페이지는 저장할 수 없어요"
+  },
+  "gateUpdateTitle": {
+    "message": "BrainTube를 업데이트해 주세요"
+  },
+  "gateUpdateBody": {
+    "message": "이 버전은 더 이상 지원되지 않아요. 계속 저장하고 질문하려면 업데이트해 주세요."
+  },
+  "gateUpdateButton": {
+    "message": "업데이트"
+  },
+  "gatePausedTitle": {
+    "message": "BrainTube가 잠시 멈췄어요"
+  },
+  "gatePausedBody": {
+    "message": "문제를 고치고 있어요. 잠시 후 다시 시도해 주세요."
+  },
+  "gateAvailable": {
+    "message": "BrainTube 새 버전이 나왔어요."
+  },
+  "gateClose": {
+    "message": "닫기"
   }
 }

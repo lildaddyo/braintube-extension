@@ -382,5 +382,26 @@
   },
   "pageCannotBeSaved": {
     "message": "This page cannot be saved"
+  },
+  "gateUpdateTitle": {
+    "message": "Please update BrainTube"
+  },
+  "gateUpdateBody": {
+    "message": "This version is no longer supported. Update to keep saving and asking your brain."
+  },
+  "gateUpdateButton": {
+    "message": "Update"
+  },
+  "gatePausedTitle": {
+    "message": "BrainTube is paused"
+  },
+  "gatePausedBody": {
+    "message": "We're fixing something on our side. Please try again in a little while."
+  },
+  "gateAvailable": {
+    "message": "A new version of BrainTube is available."
+  },
+  "gateClose": {
+    "message": "Close"
   }
 }

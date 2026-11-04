@@ -71,7 +71,10 @@ export async function getHeaders() {
   return {
     'Authorization': `Bearer ${session?.access_token}`,
     'Content-Type': 'application/json',
-    'apikey': CONFIG.SUPABASE_ANON_KEY
+    'apikey': CONFIG.SUPABASE_ANON_KEY,
+    // Version gate (W2-5, app-gate.js): a build below the server's floor gets a 426 instead of a broken answer.
+    'x-bt-client': 'extension',
+    'x-bt-client-version': globalThis.chrome?.runtime?.getManifest?.().version || '0'
   };
 }
 
