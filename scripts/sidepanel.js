@@ -5,6 +5,7 @@ import { getItem, getTranscriptSegments, getHighlights, generateSummary, chatIte
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
+import { applyGate } from './app-gate.js';
 import { t, localizePage, uiLanguage } from './i18n.js';
 import { upgradeUrl, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
 
@@ -32,6 +33,9 @@ let currentBookmarkFilter = 'unread';
 
 // Initialize
 async function init() {
+  // Version gate (W2-5): below the supported minimum, or paused server-side, nothing else starts.
+  const gate = await applyGate().catch(() => ({ status: 'ok' }));
+  if (gate.status === 'update_required' || gate.status === 'disabled') return;
   try {
     const session = await getSession();
     if (!session) {

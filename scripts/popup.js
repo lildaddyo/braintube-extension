@@ -4,6 +4,7 @@ import { processYouTube, getItem, trackEvent, saveUrl, checkSubscription, getCre
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, SESSION_KEY, saveSession, getValidSession as getStorageSession } from './config.js';
+import { applyGate } from './app-gate.js';
 import { t, localizePage, uiLanguage } from './i18n.js';
 import { upgradeUrl, planView, shouldNudgeAfterSaves, shortDate, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
 
@@ -189,6 +190,9 @@ function showAuthError(msg) {
 
 // Initialize
 async function init() {
+  // Version gate (W2-5): below the supported minimum, or paused server-side, nothing else starts.
+  const gate = await applyGate().catch(() => ({ status: 'ok' }));
+  if (gate.status === 'update_required' || gate.status === 'disabled') return;
   try {
     const session = await getSession();
     
