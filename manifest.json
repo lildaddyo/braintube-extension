@@ -3,7 +3,7 @@
   "name": "__MSG_extName__",
   "default_locale": "en",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAweBgE20RyadYfR7KVzhkgXAn62G9KHn2OzHe5nUAqTeCiQgG8ES0dOWQtq60DF8fJrvbiQDefJJKmSdK8Eq/b3hQrS0Glt5bMT2HM9SzeJ0WZlqMG0qdce8GmosrMwHzTlFzwPRyWAtEUuaAwA0/oS8u5vPRUV89gfXwBTENgxxc8Wl2Q45H55bMFcVEkjp3agdMktGtE6zppRxkzxmtRZwRbvfnCHzCgx9u8UsActzDQQFxeGoG7EtqqPDgptC3vbKAj1qo2n7Yq2UHqwnWPK8jq5Zv4+56cJHhrR8q7r80cBhtTLa5z5MHau8hwTwWOKiBW3hijmysym4kpCumLQIDAQAB",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "__MSG_extDescription__",
   "permissions": [
     "activeTab",
