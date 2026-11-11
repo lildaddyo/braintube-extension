@@ -51,7 +51,14 @@ assert.equal(seen.init.headers['x-bt-client-version'], '1.7.0');
 const boom = async () => { throw new Error('offline'); };
 assert.deepEqual(await g.loadAppConfig({ fetchImpl: boom, now: 2000 }), body, 'fresh cache is reused');
 assert.deepEqual(await g.loadAppConfig({ fetchImpl: boom, now: 10 * 60 * 1000 }), body, 'stale copy kept on failure');
+// gateState() uses the global fetch: keep the test off the network (the live config would answer 'ok').
+globalThis.fetch = boom;
 const s = await g.gateState();
 assert.equal(s.status, 'update_required');
 assert.ok(s.killed.has('quizzes'));
+// No cached copy and the server unreachable: nothing is blocked.
+delete store.bt_app_gate;
+assert.equal((await g.gateState()).status, 'ok', 'fails open without config');
+globalThis.fetch = async () => ({ ok: false, status: 503 });
+assert.equal((await g.gateState()).status, 'ok', 'fails open on a server error');
 console.log('app-gate: ok');
