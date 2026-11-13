@@ -139,6 +139,23 @@ M = [
     ("chatUnavailable", "Chat unavailable — please try again in a moment.", "지금은 채팅을 쓸 수 없어요. 잠시 후 다시 시도해 주세요."),
     ("chatUnavailableStatus", "Chat unavailable ($STATUS$)", "지금은 채팅을 쓸 수 없어요 ($STATUS$)"),
     ("pageCannotBeSaved", "This page cannot be saved", "이 페이지는 저장할 수 없어요"),
+
+    # X bookmarks import panel (x-import.js). Placeholders keep the same order in both languages.
+    ("xImportButton", "Import bookmarks (up to $LIMIT$)", "북마크 가져오기 (최대 $LIMIT$개)"),
+    ("xImportIntro", "Saves each bookmarked post to BrainTube with its links and the post it quotes.",
+     "북마크한 게시물을 링크와 인용한 게시물까지 BrainTube에 저장해요."),
+    ("xImportFinding", "Finding bookmarks… $COUNT$", "북마크를 찾는 중… $COUNT$"),
+    ("xImportProgress", "Saving $INDEX$ of $TOTAL$… ($SAVED$ saved)", "저장 중 $INDEX$/$TOTAL$… ($SAVED$개 저장됨)"),
+    ("xImportStop", "Stop", "중지"),
+    ("xImportNone", "No bookmarks found on this page.", "이 페이지에서 북마크를 찾지 못했어요."),
+    ("xImportSignIn", "Sign in to the BrainTube extension first, then try again.",
+     "먼저 BrainTube 확장 프로그램에 로그인한 뒤 다시 시도해 주세요."),
+    ("xImportDone", "Done: $SAVED$ saved, $ALREADY$ already in BrainTube, $FAILED$ failed.",
+     "완료: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패."),
+    ("xImportStopped", "Stopped: $SAVED$ saved, $ALREADY$ already in BrainTube, $FAILED$ failed.",
+     "중지됨: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패."),
+    ("xImportError", "Import stopped: $ERROR$", "가져오기가 중지됐어요: $ERROR$"),
+    ("xImportAgain", "Import again", "다시 가져오기"),
 ]
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "_locales")

@@ -382,5 +382,86 @@
   },
   "pageCannotBeSaved": {
     "message": "This page cannot be saved"
+  },
+  "xImportButton": {
+    "message": "Import bookmarks (up to $LIMIT$)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportIntro": {
+    "message": "Saves each bookmarked post to BrainTube with its links and the post it quotes."
+  },
+  "xImportFinding": {
+    "message": "Finding bookmarks… $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportProgress": {
+    "message": "Saving $INDEX$ of $TOTAL$… ($SAVED$ saved)",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "saved": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportStop": {
+    "message": "Stop"
+  },
+  "xImportNone": {
+    "message": "No bookmarks found on this page."
+  },
+  "xImportSignIn": {
+    "message": "Sign in to the BrainTube extension first, then try again."
+  },
+  "xImportDone": {
+    "message": "Done: $SAVED$ saved, $ALREADY$ already in BrainTube, $FAILED$ failed.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "failed": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportStopped": {
+    "message": "Stopped: $SAVED$ saved, $ALREADY$ already in BrainTube, $FAILED$ failed.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "failed": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportError": {
+    "message": "Import stopped: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportAgain": {
+    "message": "Import again"
   }
 }

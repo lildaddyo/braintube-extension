@@ -4,7 +4,7 @@
   "description": "**Built from official specification** - Production-ready Chrome extension for BrainTube.",
   "main": "index.js",
   "scripts": {
-    "test": "node scripts/routing.test.mjs && node scripts/session.test.mjs && node scripts/locales.test.mjs && node scripts/content-language.test.mjs && node scripts/function-region.test.mjs"
+    "test": "node scripts/routing.test.mjs && node scripts/session.test.mjs && node scripts/locales.test.mjs && node scripts/content-language.test.mjs && node scripts/function-region.test.mjs && node scripts/x-parse.test.mjs"
   },
   "repository": {
     "type": "git",

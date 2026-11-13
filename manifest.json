@@ -61,6 +61,17 @@
       "matches": ["https://www.youtube.com/*"],
       "js": ["scripts/content-playlist-watcher.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://x.com/*"],
+      "js": ["scripts/x-parse.js", "scripts/x-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://x.com/*"],
+      "js": ["scripts/x-import.js"],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

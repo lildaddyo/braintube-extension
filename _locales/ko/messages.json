@@ -382,5 +382,86 @@
   },
   "pageCannotBeSaved": {
     "message": "이 페이지는 저장할 수 없어요"
+  },
+  "xImportButton": {
+    "message": "북마크 가져오기 (최대 $LIMIT$개)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportIntro": {
+    "message": "북마크한 게시물을 링크와 인용한 게시물까지 BrainTube에 저장해요."
+  },
+  "xImportFinding": {
+    "message": "북마크를 찾는 중… $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportProgress": {
+    "message": "저장 중 $INDEX$/$TOTAL$… ($SAVED$개 저장됨)",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "saved": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportStop": {
+    "message": "중지"
+  },
+  "xImportNone": {
+    "message": "이 페이지에서 북마크를 찾지 못했어요."
+  },
+  "xImportSignIn": {
+    "message": "먼저 BrainTube 확장 프로그램에 로그인한 뒤 다시 시도해 주세요."
+  },
+  "xImportDone": {
+    "message": "완료: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "failed": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportStopped": {
+    "message": "중지됨: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "failed": {
+        "content": "$3"
+      }
+    }
+  },
+  "xImportError": {
+    "message": "가져오기가 중지됐어요: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "xImportAgain": {
+    "message": "다시 가져오기"
   }
 }
