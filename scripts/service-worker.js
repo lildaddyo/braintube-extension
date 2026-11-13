@@ -1,5 +1,6 @@
 // BrainTube Extension - Service Worker
-import { trackEvent } from './api.js';
+import { trackEvent, saveUrl } from './api.js';
+import './x-parse.js'; // defines globalThis.btX (postText, postTitle)
 import { CONFIG, getValidSession, pinFunctionUrl } from './config.js';
 import { captureContentLanguage } from './content-language.js';
 
@@ -74,6 +75,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     saveAiConversation(message.tabId, message.platform)
       .then(result => sendResponse({ ok: true, ...result }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
+
+  // X "Import bookmarks": one post at a time from x-import.js
+  if (message.type === 'X_IMPORT_ITEM') {
+    importXPost(message.post)
+      .then((r) => sendResponse({ ok: true, duplicate: r.duplicate === true }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
     return true; // async
   }
 
@@ -189,3 +198,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     chrome.action.setBadgeText({ tabId, text: '' });
   }
 });
+
+// ── X bookmarks import ────────────────────────────────────────────────────────
+
+// Saves one bookmarked X post. The browser already has the post's full text (long posts included,
+// which X's public page often hides), so it goes in as page_text; the server still reads the link.
+async function importXPost(post) {
+  if (!post?.id || !/^\d+$/.test(String(post.id))) throw new Error('Bad post');
+  const session = await getValidSession().catch(() => null);
+  if (!session?.access_token) throw new Error('NOT_LOGGED_IN');
+  const url = `https://x.com/${post.author || 'i/web'}/status/${post.id}`;
+  const r = await saveUrl(url, { page: { title: globalThis.btX.postTitle(post), text: globalThis.btX.postText(post) } });
+  return { duplicate: r.duplicate === true, itemId: r.itemId };
+}
