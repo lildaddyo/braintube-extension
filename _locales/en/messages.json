@@ -463,5 +463,96 @@
   },
   "xImportAgain": {
     "message": "Import again"
+  },
+  "planFree": {
+    "message": "Free"
+  },
+  "planStarter": {
+    "message": "Starter"
+  },
+  "planPro": {
+    "message": "Pro"
+  },
+  "planProPlus": {
+    "message": "Pro+"
+  },
+  "planTrial": {
+    "message": "Pro trial"
+  },
+  "creditsLeft": {
+    "message": "$COUNT$ credits left",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "creditsTrialEnds": {
+    "message": "$COUNT$ credits · ends $DATE$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "date": {
+        "content": "$2"
+      }
+    }
+  },
+  "upgrade": {
+    "message": "Upgrade"
+  },
+  "keepPro": {
+    "message": "Keep Pro"
+  },
+  "seePlans": {
+    "message": "See plans"
+  },
+  "notNow": {
+    "message": "Not now"
+  },
+  "limitTitle": {
+    "message": "You're out of AI credits"
+  },
+  "limitBody": {
+    "message": "Saving and summaries stay free. Starter gives you $STARTER$ AI credits a month, Pro $PRO$, for Ask AI, quizzes and more.",
+    "placeholders": {
+      "starter": {
+        "content": "$1"
+      },
+      "pro": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitBodyTrial": {
+    "message": "Saving and summaries stay free. Keep Pro to get 1,000 AI credits every month."
+  },
+  "nudgeTitle": {
+    "message": "You've saved $COUNT$ things to BrainTube",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "nudgeBody": {
+    "message": "Ask questions across all of them. Pro gives you $PRO$ AI credits a month; Free has $FREE$.",
+    "placeholders": {
+      "pro": {
+        "content": "$1"
+      },
+      "free": {
+        "content": "$2"
+      }
+    }
+  },
+  "nudgeBodyTrial": {
+    "message": "Your Pro trial is on. Keep Pro so your library keeps its AI chat, summaries and quizzes."
+  },
+  "rateLimited": {
+    "message": "Too many saves right now. Try again in a few minutes."
+  },
+  "chatRateLimited": {
+    "message": "Too many questions right now. Try again in a few minutes."
   }
 }

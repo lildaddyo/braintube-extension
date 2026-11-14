@@ -305,3 +305,8 @@ body {
 
 /* Korean: wrap between words, never inside one */
 :lang(ko) body { word-break: keep-all; }
+
+/* Out-of-credits message in chat */
+.limit-message strong { display: block; margin-bottom: 4px; }
+.limit-message p { margin: 0 0 10px; }
+.limit-message .btn-upgrade-chat { width: auto; padding: 8px 14px; font-size: 13px; }

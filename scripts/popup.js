@@ -1,10 +1,11 @@
 // BrainTube Extension - Popup Script
 import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
-import { processYouTube, getItem, trackEvent, saveUrl } from './api.js';
+import { processYouTube, getItem, trackEvent, saveUrl, checkSubscription, getCredits } from './api.js';
 import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
 import { CONFIG, getValidSession as getStorageSession } from './config.js';
-import { t, localizePage } from './i18n.js';
+import { t, localizePage, uiLanguage } from './i18n.js';
+import { upgradeUrl, planView, shouldNudgeAfterSaves, shortDate, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
 
 localizePage();
 
@@ -51,6 +52,122 @@ const bookmarkBtn = document.getElementById('bookmark-btn');
 const openLibraryBtn = document.getElementById('open-library-btn');
 
 let currentVideo = null;
+
+// ── Plan, credits and upgrade prompts ─────────────────────────────────────────
+const planBar         = document.getElementById('plan-bar');
+const planBadge       = document.getElementById('plan-badge');
+const creditCount     = document.getElementById('credit-count');
+const creditMeter     = document.getElementById('credit-meter');
+const creditMeterFill = document.getElementById('credit-meter-fill');
+const upgradeBtn      = document.getElementById('upgrade-btn');
+const upgradeCard     = document.getElementById('upgrade-card');
+const upgradeTitle    = document.getElementById('upgrade-title');
+const upgradeBody     = document.getElementById('upgrade-body');
+const upgradeCardBtn  = document.getElementById('upgrade-card-btn');
+const upgradeDismiss  = document.getElementById('upgrade-dismiss-btn');
+
+const PLAN_CACHE_KEY = 'bt_plan_view';
+const SAVE_COUNT_KEY = 'bt_save_count';
+const NUDGE_SHOWN_KEY = 'bt_save_nudge_shown_at';
+const PLAN_LABELS = { free: () => t('planFree'), starter: () => t('planStarter'), pro: () => t('planPro'), pro_plus: () => t('planProPlus') };
+
+let plan = null;            // planView() result, or null until known
+let upgradeTrigger = null;  // what opened the visible upgrade card
+
+function renderPlan(view) {
+  plan = view;
+  if (!view) { planBar.style.display = 'none'; return; }
+  planBar.style.display = 'flex';
+  planBadge.className = `plan-badge${view.kind === 'trial' ? ' trial' : ''}`;
+  planBadge.textContent = view.kind === 'trial' ? t('planTrial') : (PLAN_LABELS[view.plan] || PLAN_LABELS.pro)();
+
+  if (view.balance === null) {
+    creditCount.textContent = '';
+  } else if (view.kind === 'trial' && view.trialEnd) {
+    creditCount.textContent = t('creditsTrialEnds', view.balance, shortDate(view.trialEnd, uiLanguage()));
+  } else {
+    creditCount.textContent = t('creditsLeft', view.balance);
+  }
+  creditCount.classList.toggle('low', view.low);
+
+  const pct = view.balance !== null && view.allowance ? Math.max(0, Math.min(100, (view.balance / view.allowance) * 100)) : 0;
+  creditMeterFill.style.width = `${pct}%`;
+  creditMeterFill.classList.toggle('low', view.low);
+  creditMeter.style.display = view.balance === null ? 'none' : 'block';
+
+  if (view.kind === 'paid') {
+    upgradeBtn.style.display = 'none';
+  } else {
+    upgradeBtn.textContent = view.kind === 'trial' ? t('keepPro') : t('upgrade');
+    upgradeBtn.style.display = 'inline-block';
+  }
+}
+
+// Shows the cached plan at once, then refreshes it from the backend. A failed lookup keeps the cache
+// (or no bar): the popup must never break because billing is slow.
+async function loadPlan() {
+  try {
+    const cached = (await chrome.storage.local.get(PLAN_CACHE_KEY))[PLAN_CACHE_KEY];
+    if (cached) renderPlan(cached);
+  } catch { /* ignore */ }
+  try {
+    const [sub, credits] = await Promise.all([checkSubscription(), getCredits().catch(() => null)]);
+    const view = planView(sub, credits);
+    renderPlan(view);
+    await chrome.storage.local.set({ [PLAN_CACHE_KEY]: view });
+    if (view.kind !== 'paid' && view.balance === 0) showUpgradeCard('limit_hit');
+  } catch (err) {
+    console.warn('[BrainTube] plan lookup failed:', err?.message);
+  }
+}
+
+function openUpgrade(trigger) {
+  trackEvent('extension_upgrade_clicked', { trigger, plan: plan?.plan ?? null, kind: plan?.kind ?? null });
+  chrome.tabs.create({ url: upgradeUrl({ trigger, surface: 'popup' }) });
+}
+
+function showUpgradeCard(trigger, { saveCount = 0 } = {}) {
+  if (plan?.kind === 'paid') return;
+  upgradeTrigger = trigger;
+  const trial = plan?.kind === 'trial';
+  if (trigger === 'limit_hit') {
+    upgradeTitle.textContent = t('limitTitle');
+    upgradeBody.textContent = trial ? t('limitBodyTrial') : t('limitBody', PLAN_CREDITS.starter, PLAN_CREDITS.pro.toLocaleString('en-US'));
+  } else {
+    upgradeTitle.textContent = t('nudgeTitle', saveCount);
+    upgradeBody.textContent = trial ? t('nudgeBodyTrial') : t('nudgeBody', PLAN_CREDITS.pro.toLocaleString('en-US'), PLAN_CREDITS.free);
+  }
+  upgradeCardBtn.textContent = trial ? t('keepPro') : t('seePlans');
+  upgradeCard.style.display = 'block';
+  trackEvent('extension_upgrade_prompt_shown', { trigger, plan: plan?.plan ?? null, kind: plan?.kind ?? null, save_count: saveCount || null });
+}
+
+// Counts a successful new save and shows the save prompt at the thresholds in upgrade.js.
+async function countSave() {
+  try {
+    const got = await chrome.storage.local.get([SAVE_COUNT_KEY, NUDGE_SHOWN_KEY]);
+    const count = (Number(got[SAVE_COUNT_KEY]) || 0) + 1;
+    await chrome.storage.local.set({ [SAVE_COUNT_KEY]: count });
+    if (plan && shouldNudgeAfterSaves(count, Number(got[NUDGE_SHOWN_KEY]) || 0, plan.kind)) {
+      await chrome.storage.local.set({ [NUDGE_SHOWN_KEY]: count });
+      showUpgradeCard('save_nudge', { saveCount: count });
+    }
+  } catch { /* storage unavailable: no prompt */ }
+}
+
+// A save error: credits gone → upgrade card; rate limit → toast. Returns true when handled.
+function handleLimitError(err) {
+  if (err?.code === ERR_NO_CREDITS) {
+    if (plan) renderPlan({ ...plan, balance: 0, low: true });
+    showUpgradeCard('limit_hit');
+    return true;
+  }
+  if (err?.code === ERR_RATE_LIMITED) {
+    showToast(t('rateLimited'), true, 4000);
+    return true;
+  }
+  return false;
+}
 
 // ── Toast / error helpers ──────────────────────────────────────────────────────
 const toastEl     = document.getElementById('toast');
@@ -108,6 +225,7 @@ async function showMainSection(session) {
   const user = await getCurrentUser();
   userEmail.textContent = user?.email || t('userFallback');
 
+  loadPlan();
   await trackEvent('extension_opened');
 }
 
@@ -193,6 +311,7 @@ async function handleSaveConversation(tabId, platform) {
 
     if (resp?.ok) {
       btn.textContent = t('savedBang');
+      countSave();
       if (resp.fallback) {
         // Content script couldn't extract text — URL + title saved as reference.
         status.textContent = resp.title
@@ -393,9 +512,10 @@ async function handleSaveVideo() {
 
     saveVideoBtn.textContent = '✅ Saved!';
     showToast(t('videoSaved'));
+    countSave();
     await loadCurrentVideo();
   } catch (error) {
-    showToast(error.message || t('failedSaveVideo'), true);
+    if (!handleLimitError(error)) showToast(error.message || t('failedSaveVideo'), true);
     saveVideoBtn.disabled = false;
     saveVideoBtn.textContent = t('saveThisVideo');
   }
@@ -422,9 +542,10 @@ async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }
       : res.slow ? t('serverSlow')
       : bookmark ? t('bookmarkedToast') : t('savedSummarySoon'));
     trackEvent(bookmark ? 'extension_bookmark_saved' : 'extension_page_saved', { source_type: res.sourceType, duplicate: res.duplicate, page_text: !!page?.text });
+    if (!res.duplicate) countSave();
     reset();
   } catch (err) {
-    showToast(err.message || t('saveFailed'), true);
+    if (!handleLimitError(err)) showToast(err.message || t('saveFailed'), true);
     btn.textContent = t('errorBtn');
     reset();
   }
@@ -457,7 +578,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+upgradeBtn.addEventListener('click', () => openUpgrade(plan?.kind === 'trial' ? 'trial_badge' : 'popup_badge'));
+upgradeCardBtn.addEventListener('click', () => openUpgrade(upgradeTrigger || 'limit_hit'));
+upgradeDismiss.addEventListener('click', () => {
+  trackEvent('extension_upgrade_dismissed', { trigger: upgradeTrigger });
+  upgradeCard.style.display = 'none';
+});
+
 signoutBtn.addEventListener('click', async () => {
+  try { await chrome.storage.local.remove(PLAN_CACHE_KEY); } catch { /* ignore */ }
+  renderPlan(null);
+  upgradeCard.style.display = 'none';
   await signOut();
   showAuthSection();
 });

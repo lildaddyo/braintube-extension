@@ -156,6 +156,31 @@ M = [
      "중지됨: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패."),
     ("xImportError", "Import stopped: $ERROR$", "가져오기가 중지됐어요: $ERROR$"),
     ("xImportAgain", "Import again", "다시 가져오기"),
+
+    # plan, credits and upgrade prompts (popup + side panel). Plan names per GLOSSARY: 무료 / 스타터 / 프로.
+    ("planFree", "Free", "무료"),
+    ("planStarter", "Starter", "스타터"),
+    ("planPro", "Pro", "프로"),
+    ("planProPlus", "Pro+", "프로+"),
+    ("planTrial", "Pro trial", "프로 무료 체험"),
+    ("creditsLeft", "$COUNT$ credits left", "크레딧 $COUNT$개 남음"),
+    ("creditsTrialEnds", "$COUNT$ credits · ends $DATE$", "크레딧 $COUNT$개 · $DATE$ 종료"),
+    ("upgrade", "Upgrade", "업그레이드"),
+    ("keepPro", "Keep Pro", "프로 계속 쓰기"),
+    ("seePlans", "See plans", "요금제 보기"),
+    ("notNow", "Not now", "나중에"),
+    ("limitTitle", "You're out of AI credits", "AI 크레딧을 다 썼어요"),
+    ("limitBody", "Saving and summaries stay free. Starter gives you $STARTER$ AI credits a month, Pro $PRO$, for Ask AI, quizzes and more.",
+     "저장과 요약은 계속 무료예요. 스타터는 매달 AI 크레딧 $STARTER$개, 프로는 $PRO$개를 드려요. AI 질문, 퀴즈 등에 쓸 수 있어요."),
+    ("limitBodyTrial", "Saving and summaries stay free. Keep Pro to get 1,000 AI credits every month.",
+     "저장과 요약은 계속 무료예요. 프로를 계속 쓰면 매달 AI 크레딧 1,000개를 받아요."),
+    ("nudgeTitle", "You've saved $COUNT$ things to BrainTube", "BrainTube에 $COUNT$개를 저장했어요"),
+    ("nudgeBody", "Ask questions across all of them. Pro gives you $PRO$ AI credits a month; Free has $FREE$.",
+     "저장한 내용 전체에 질문해 보세요. 프로는 매달 AI 크레딧 $PRO$개, 무료는 $FREE$개예요."),
+    ("nudgeBodyTrial", "Your Pro trial is on. Keep Pro so your library keeps its AI chat, summaries and quizzes.",
+     "지금 프로 무료 체험 중이에요. 프로를 계속 쓰면 AI 채팅, 요약, 퀴즈를 그대로 쓸 수 있어요."),
+    ("rateLimited", "Too many saves right now. Try again in a few minutes.", "지금은 저장 요청이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."),
+    ("chatRateLimited", "Too many questions right now. Try again in a few minutes.", "지금은 질문이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."),
 ]
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "_locales")

@@ -463,5 +463,96 @@
   },
   "xImportAgain": {
     "message": "다시 가져오기"
+  },
+  "planFree": {
+    "message": "무료"
+  },
+  "planStarter": {
+    "message": "스타터"
+  },
+  "planPro": {
+    "message": "프로"
+  },
+  "planProPlus": {
+    "message": "프로+"
+  },
+  "planTrial": {
+    "message": "프로 무료 체험"
+  },
+  "creditsLeft": {
+    "message": "크레딧 $COUNT$개 남음",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "creditsTrialEnds": {
+    "message": "크레딧 $COUNT$개 · $DATE$ 종료",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "date": {
+        "content": "$2"
+      }
+    }
+  },
+  "upgrade": {
+    "message": "업그레이드"
+  },
+  "keepPro": {
+    "message": "프로 계속 쓰기"
+  },
+  "seePlans": {
+    "message": "요금제 보기"
+  },
+  "notNow": {
+    "message": "나중에"
+  },
+  "limitTitle": {
+    "message": "AI 크레딧을 다 썼어요"
+  },
+  "limitBody": {
+    "message": "저장과 요약은 계속 무료예요. 스타터는 매달 AI 크레딧 $STARTER$개, 프로는 $PRO$개를 드려요. AI 질문, 퀴즈 등에 쓸 수 있어요.",
+    "placeholders": {
+      "starter": {
+        "content": "$1"
+      },
+      "pro": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitBodyTrial": {
+    "message": "저장과 요약은 계속 무료예요. 프로를 계속 쓰면 매달 AI 크레딧 1,000개를 받아요."
+  },
+  "nudgeTitle": {
+    "message": "BrainTube에 $COUNT$개를 저장했어요",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "nudgeBody": {
+    "message": "저장한 내용 전체에 질문해 보세요. 프로는 매달 AI 크레딧 $PRO$개, 무료는 $FREE$개예요.",
+    "placeholders": {
+      "pro": {
+        "content": "$1"
+      },
+      "free": {
+        "content": "$2"
+      }
+    }
+  },
+  "nudgeBodyTrial": {
+    "message": "지금 프로 무료 체험 중이에요. 프로를 계속 쓰면 AI 채팅, 요약, 퀴즈를 그대로 쓸 수 있어요."
+  },
+  "rateLimited": {
+    "message": "지금은 저장 요청이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."
+  },
+  "chatRateLimited": {
+    "message": "지금은 질문이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."
   }
 }

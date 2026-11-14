@@ -6,6 +6,7 @@ import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
 import { t, localizePage, uiLanguage } from './i18n.js';
+import { upgradeUrl, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
 
 localizePage();
 
@@ -286,7 +287,9 @@ async function sendChat() {
     await trackEvent('extension_chat_message', { item_id: currentItem?.id, mode });
   } catch (error) {
     document.getElementById(loadingId)?.remove();
-    addMessage('assistant', '❌ ' + error.message);
+    if (error?.code === ERR_NO_CREDITS) addLimitMessage(mode);
+    else if (error?.code === ERR_RATE_LIMITED) addMessage('assistant', t('chatRateLimited'));
+    else addMessage('assistant', '❌ ' + error.message);
     conversationHistory.pop();
   } finally {
     chatSend.disabled = false;
@@ -353,6 +356,27 @@ function addMessage(role, text, id) {
   }
   chatMessages.appendChild(msgEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Out of AI credits in chat: say so plainly and offer the plans page (utm_source=extension).
+function addLimitMessage(mode) {
+  const msgEl = document.createElement('div');
+  msgEl.className = 'message assistant limit-message';
+  const title = document.createElement('strong');
+  title.textContent = t('limitTitle');
+  const body = document.createElement('p');
+  body.textContent = t('limitBody', PLAN_CREDITS.starter, PLAN_CREDITS.pro.toLocaleString('en-US'));
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary btn-upgrade-chat';
+  btn.textContent = t('seePlans');
+  btn.addEventListener('click', () => {
+    trackEvent('extension_upgrade_clicked', { trigger: 'limit_hit', surface: 'sidepanel', mode });
+    chrome.tabs.create({ url: upgradeUrl({ trigger: 'limit_hit', surface: 'sidepanel' }) });
+  });
+  msgEl.append(title, body, btn);
+  chatMessages.appendChild(msgEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  trackEvent('extension_upgrade_prompt_shown', { trigger: 'limit_hit', surface: 'sidepanel', mode });
 }
 
 // Tab switching

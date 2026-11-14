@@ -2,6 +2,7 @@
 import { CONFIG, buildUrl, getHeaders } from './config.js';
 import { routeForUrl } from './routing.js';
 import { t } from './i18n.js';
+import { limitError } from './upgrade.js';
 
 export async function processYouTube(url, videoId, extra = {}) {
   const controller = new AbortController();
@@ -20,7 +21,7 @@ export async function processYouTube(url, videoId, extra = {}) {
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || `Server error ${response.status}`);
+    throw limitError(response.status, error) || new Error(error.error || `Server error ${response.status}`);
   }
   return await response.json();
 }
@@ -68,9 +69,9 @@ async function readJsonOrText(response) {
   const text = await response.text();
   console.error('[BrainTube] chat raw response:', text);
   if (!response.ok) {
-    let msg = t('chatUnavailable');
-    try { msg = JSON.parse(text).error || msg; } catch {}
-    throw new Error(msg);
+    let body = {};
+    try { body = JSON.parse(text); } catch {}
+    throw limitError(response.status, body, t('chatUnavailable')) || new Error(body.error || t('chatUnavailable'));
   }
   try {
     const data = JSON.parse(text);
@@ -94,7 +95,7 @@ export async function chatCorpus(messages) {
   console.log('[BrainTube] chatCorpus response:', response.status, `${rawText.length} chars`);
   let data;
   try { data = JSON.parse(rawText); } catch { data = {}; }
-  if (!response.ok) throw new Error(data.error || t('chatUnavailableStatus', response.status));
+  if (!response.ok) throw limitError(response.status, data) || new Error(data.error || t('chatUnavailableStatus', response.status));
   const text = data.answer || data.reply || data.response || data.message || data.content || '';
   if (!text) throw new Error(t('chatUnavailable'));
   return text;
@@ -102,6 +103,14 @@ export async function chatCorpus(messages) {
 
 export async function checkSubscription() {
   const response = await fetch(buildUrl(CONFIG.ENDPOINTS.CHECK_SUBSCRIPTION), { method: 'POST', headers: await getHeaders(), body: JSON.stringify({}) });
+  if (!response.ok) throw new Error(`check-subscription ${response.status}`);
+  return await response.json();
+}
+
+// { balance, monthly_allowance, bonus_credits, cycle_end, ... } from check-credits (creates the Free row on first call).
+export async function getCredits() {
+  const response = await fetch(buildUrl(CONFIG.ENDPOINTS.CHECK_CREDITS), { method: 'POST', headers: await getHeaders(), body: JSON.stringify({}) });
+  if (!response.ok) throw new Error(`check-credits ${response.status}`);
   return await response.json();
 }
 
@@ -165,7 +174,7 @@ export async function saveUrl(url, { bookmark = false, page = null } = {}) {
   const data = await response.json().catch(() => ({}));
   // A page already in the library answers 200 with existingId.
   if (data.existingId) return { itemId: data.existingId, duplicate: true, pending: false, sourceType: null };
-  if (!response.ok || data.error) throw new Error(data.error || `Server error ${response.status}`);
+  if (!response.ok || data.error) throw limitError(response.status, data) || new Error(data.error || `Server error ${response.status}`);
   return { itemId: data.itemId || null, duplicate: false, pending: data.pending === true, sourceType: data.sourceType || 'web' };
 }
 
