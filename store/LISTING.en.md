@@ -6,6 +6,10 @@ English › Description. Screenshots: `store/screenshots/en-1.png` … `en-5.png
 popup and side panel by `store/shots/`). Every claim is checked against content-canon `truth/braintube.md`
 (2026-11-11) or the extension code; the claim map is at the bottom.
 
+v1.7.0 (security audit 2026-11-01): the PRIVACY section says exactly what is read, when, where it goes and which AI
+processors get it (in step with `store/LISTING.ko.md` and `PRIVACY-NOTES.md`). Capture is user-triggered, playlist
+sync runs in the background, and content goes to the AI processors named there.
+
 ## Name (from manifest, max 75)
 BrainTube: Save YouTube Videos & Ask Your Library
 
@@ -36,8 +40,14 @@ PLANS AND CREDITS
 • Starter: 300 AI credits a month. Pro: 1,000 AI credits a month.
 • Credits pay for AI actions such as Ask AI on an item and quizzes. Your plan and credit balance are shown in the popup, and you can upgrade from there.
 
-PRIVACY
-• Your library is private to your account and stored in the EU.
+PRIVACY: WHAT BRAINTUBE READS AND WHERE IT GOES
+• Saving pages and videos: only when you click Save, Save URL or Bookmark, BrainTube sends that tab's address and visible text to the BrainTube server, which reads and summarises it.
+• Saving AI conversations (claude.ai, chatgpt.com): only when you click Save Conversation in the BrainTube popup, BrainTube reads that conversation and sends its text to the BrainTube server, where Anthropic (Claude) summarises it. Nothing is captured automatically.
+• X bookmarks: only when you click Import on your X Bookmarks page, BrainTube scrolls that list and sends the text of up to 100 bookmarked posts to BrainTube. Nothing is liked, posted or changed on X.
+• YouTube playlist sync: while you are signed in, adding a video to one of your own YouTube playlists on youtube.com sends that playlist's ID to BrainTube, which imports the playlist into your library. This happens in the background.
+• AI processing: summaries, chat and search use AI providers that process content on BrainTube's behalf: Anthropic, OpenAI and Google (Gemini).
+• No ads, and we don't sell your data. Your library is private to your account and stored in the EU.
+• Your sign-in stays on this computer until you sign out, and web pages cannot read it.
 • Privacy policy: https://brain-tube.com/privacy
 
 Available in English and Korean.
@@ -62,6 +72,7 @@ Get started free at https://brain-tube.com
 | Starter 300 / Pro 1,000 credits | C-0d47f1a87f, C-dcf71816c7, public.tier_credit_allocations |
 | Credits for Ask AI, quizzes | C-2c0a4a0f3a (Ask AI 2, Quiz 2) |
 | Stored in the EU, private to your account | C-9604984bed (approved softer wording) |
+| What is read, when, AI processors (v1.7.0) | security audit 2026-11-01, PR #15, `PRIVACY-NOTES.md`; X import = x-import.js LIMIT 100 |
 
 Removed from the old listing (not verifiable or FORBIDDEN): "Collections & Tags" (Collections killed, C-c19b98a596),
 "timestamp citations you can click" in chat (not in the extension), "Highlights & timestamped notes" creation (the

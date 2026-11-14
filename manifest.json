@@ -3,7 +3,7 @@
   "name": "__MSG_extName__",
   "default_locale": "en",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAweBgE20RyadYfR7KVzhkgXAn62G9KHn2OzHe5nUAqTeCiQgG8ES0dOWQtq60DF8fJrvbiQDefJJKmSdK8Eq/b3hQrS0Glt5bMT2HM9SzeJ0WZlqMG0qdce8GmosrMwHzTlFzwPRyWAtEUuaAwA0/oS8u5vPRUV89gfXwBTENgxxc8Wl2Q45H55bMFcVEkjp3agdMktGtE6zppRxkzxmtRZwRbvfnCHzCgx9u8UsActzDQQFxeGoG7EtqqPDgptC3vbKAj1qo2n7Yq2UHqwnWPK8jq5Zv4+56cJHhrR8q7r80cBhtTLa5z5MHau8hwTwWOKiBW3hijmysym4kpCumLQIDAQAB",
-  "version": "1.6.4",
+  "version": "1.7.0",
   "description": "__MSG_extDescription__",
   "permissions": [
     "activeTab",
@@ -18,13 +18,10 @@
     "https://www.youtube.com/*",
     "https://youtube.com/*",
     "https://iqjnmmtvhyavgrsxpoao.supabase.co/*",
-    "https://*.supabase.co/*",
-    "https://claude.ai/*",
-    "https://chatgpt.com/*",
     "https://braintube-mcp-production.up.railway.app/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://braintube-mcp-production.up.railway.app https://www.youtube.com https://*.youtube.com"
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://iqjnmmtvhyavgrsxpoao.supabase.co https://braintube-mcp-production.up.railway.app https://www.youtube.com https://*.youtube.com"
   },
   "background": {
     "service_worker": "scripts/service-worker.js",
@@ -47,20 +44,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/*", "https://chatgpt.com/*"],
-      "js": ["scripts/ai-capture.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["scripts/page-world-shim.js"],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
       "matches": ["https://www.youtube.com/*"],
       "js": ["scripts/content-playlist-watcher.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     },
     {
       "matches": ["https://x.com/*"],
@@ -82,16 +68,5 @@
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  },
-  "oauth2": {
-    "client_id": "605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
-  },
-
-  "web_accessible_resources": [
-    {
-      "resources": ["icons/*", "scripts/page-world-shim.js"],
-      "matches": ["*://www.youtube.com/*", "https://claude.ai/*", "https://chatgpt.com/*"]
-    }
-  ]
+  }
 }

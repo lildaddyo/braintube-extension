@@ -6,12 +6,14 @@
 //      Supabase's /auth/v1/authorize which 302s to brain-tube.com.
 //   2. launchWebAuthFlow → Google login → redirect back with id_token in hash.
 //   3. Exchange id_token with Supabase /auth/v1/token?grant_type=id_token.
-//   4. Save bt_session to chrome.storage.local.
+//   4. Save the session to chrome.storage.session (config.js saveSession).
 //   5. Close this tab via chrome.tabs.remove (window.close unreliable here).
 //   Popup detects session via chrome.storage.onChanged — no new tabs opened.
 
-const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
-const SUPABASE_ANON = 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1';
+import { CONFIG, saveSession } from './config.js';
+
+const SUPABASE_URL  = CONFIG.SUPABASE_URL;
+const SUPABASE_ANON = CONFIG.SUPABASE_ANON_KEY;
 const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
 
 const statusEl  = document.getElementById('status');
@@ -137,9 +139,7 @@ async function runGoogleAuth() {
           user:          data.user,
         };
 
-        // Write both keys so getHeaders() in config.js always finds the token
-        // regardless of which code path reads it.
-        await chrome.storage.local.set({ bt_session: session, session: session });
+        await saveSession(session);
         console.log('✅ Signed in');
 
         // Close this tab. window.close() is unreliable for tabs opened via

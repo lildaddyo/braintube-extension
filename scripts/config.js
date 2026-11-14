@@ -76,10 +76,121 @@ export async function getHeaders() {
   };
 }
 
-// Helper to get the current session as stored — checks bt_session then session
+// ── Session storage (audit 2026-11-01, finding 3; D-212 "keep users signed in") ──────────────────────────
+// The live session (access + refresh token) lives in chrome.storage.session under one key, with access level
+// TRUSTED_CONTEXTS (the service worker sets it at start), so content scripts cannot read it; they ask the
+// service worker to make authenticated calls. storage.session survives service-worker restarts but not a
+// browser restart, so the refresh token alone is also kept in the extension's own IndexedDB, encrypted with a
+// non-extractable AES-GCM key held in the same database. Content scripts run in the page's origin and cannot
+// open the extension origin's IndexedDB (storage.local, by contrast, is readable from content scripts). After
+// a browser restart the first read exchanges that refresh token for a new session. Sign-out deletes it, and a
+// refresh token the server rejects is deleted too. Older versions kept the session in chrome.storage.local under
+// "session" and "bt_session"; the first read moves it here and deletes those keys.
+export const SESSION_KEY = 'bt_session';
+const LEGACY_LOCAL_KEYS = ['session', 'bt_session'];
+const PERSIST_DB = 'bt_auth';
+const PERSIST_STORE = 'kv';
+const WRAP_KEY_ID = 'wrap_key';
+const REFRESH_ID = 'refresh';
+
+/** Locks chrome.storage.session to extension pages and the service worker (content scripts excluded). */
+export async function lockSessionStorage() {
+  try { await chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }); } catch { /* default is already TRUSTED_CONTEXTS */ }
+}
+
+// One IndexedDB transaction on the persistent store; resolves with the request's result once it commits.
+function persistOp(mode, op) {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open(PERSIST_DB, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(PERSIST_STORE);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction(PERSIST_STORE, mode);
+      const req = op(tx.objectStore(PERSIST_STORE));
+      tx.oncomplete = () => { db.close(); resolve(req.result); };
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+
+// The AES-GCM key that wraps the stored refresh token; made on first use, never exportable. The get-or-put
+// runs in one readwrite transaction, so two contexts making it at once still end up sharing one key.
+let wrapKeyPromise = null;
+function wrapKey() {
+  wrapKeyPromise ??= (async () => {
+    const existing = await persistOp('readonly', (s) => s.get(WRAP_KEY_ID));
+    if (existing) return existing;
+    const fresh = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    await persistOp('readwrite', (s) => {
+      const req = s.get(WRAP_KEY_ID);
+      req.onsuccess = () => { if (!req.result) s.put(fresh, WRAP_KEY_ID); };
+      return req;
+    });
+    return persistOp('readonly', (s) => s.get(WRAP_KEY_ID));
+  })().catch((e) => { wrapKeyPromise = null; throw e; });
+  return wrapKeyPromise;
+}
+
+async function persistRefreshToken(refreshToken) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await wrapKey(), new TextEncoder().encode(refreshToken));
+  await persistOp('readwrite', (s) => s.put({ iv, data }, REFRESH_ID));
+}
+
+async function readPersistedRefreshToken() {
+  const rec = await persistOp('readonly', (s) => s.get(REFRESH_ID));
+  if (!rec) return null;
+  try {
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: rec.iv }, await wrapKey(), rec.data);
+    return new TextDecoder().decode(plain);
+  } catch {
+    await forgetPersistedRefreshToken();
+    return null;
+  }
+}
+
+async function forgetPersistedRefreshToken() {
+  try { await persistOp('readwrite', (s) => s.delete(REFRESH_ID)); } catch { /* nothing stored */ }
+}
+
+export async function saveSession(session) {
+  await chrome.storage.session.set({ [SESSION_KEY]: session });
+  if (session?.refresh_token) {
+    try { await persistRefreshToken(session.refresh_token); } catch (e) { console.warn('BrainTube: could not keep the sign-in across restarts', e); }
+  }
+}
+
+export async function clearSession() {
+  await chrome.storage.session.remove(SESSION_KEY);
+  await chrome.storage.local.remove(LEGACY_LOCAL_KEYS);
+  await forgetPersistedRefreshToken();
+}
+
+// Moves a session left in chrome.storage.local by v1.6.1 or older into storage.session, once.
+export async function migrateLegacySession() {
+  const legacy = await chrome.storage.local.get(LEGACY_LOCAL_KEYS);
+  const session = legacy.bt_session || legacy.session || null;
+  if (Object.keys(legacy).length) await chrome.storage.local.remove(LEGACY_LOCAL_KEYS);
+  if (session?.access_token) {
+    await saveSession(session);
+    return session;
+  }
+  return null;
+}
+
+// After a browser restart: a new session from the stored refresh token, or null (none stored, or offline;
+// a token the server rejects is deleted by refreshSession).
+async function restorePersistedSession() {
+  const refreshToken = await readPersistedRefreshToken().catch(() => null);
+  if (!refreshToken) return null;
+  return refreshSession({ refresh_token: refreshToken }).catch(() => null);
+}
+
+// The current session (refreshed only when restoring after a browser restart), or null.
 export async function getSession() {
-  const stored = await chrome.storage.local.get(['bt_session', 'session']);
-  return stored.bt_session || stored.session || null;
+  const stored = await chrome.storage.session.get(SESSION_KEY);
+  return stored[SESSION_KEY] || await migrateLegacySession() || await restorePersistedSession();
 }
 
 // Seconds-since-epoch expiry of a session's access token (JWT exp claim, else expires_at).
@@ -94,7 +205,7 @@ function tokenExpiry(session) {
 
 let refreshInFlight = null;
 
-// Exchange the refresh token for a new session and store it under both keys.
+// Exchange the refresh token for a new session and store it.
 // A rejected refresh token (revoked, or already rotated) clears the session so the UI asks to sign in again.
 export async function refreshSession(session) {
   if (!refreshInFlight) {
@@ -107,7 +218,7 @@ export async function refreshSession(session) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.access_token) {
         if (res.status >= 400 && res.status < 500) {
-          await chrome.storage.local.remove(['session', 'bt_session']);
+          await clearSession();
         }
         throw new Error('Session expired — please sign in again');
       }
@@ -119,7 +230,7 @@ export async function refreshSession(session) {
         token_type:    'bearer',
         user:          data.user || session.user,
       };
-      await chrome.storage.local.set({ bt_session: fresh, session: fresh });
+      await saveSession(fresh);
       return fresh;
     })().finally(() => { refreshInFlight = null; });
   }
@@ -132,7 +243,7 @@ export async function getValidSession() {
   if (!session?.access_token) return null;
   if (tokenExpiry(session) - Date.now() / 1000 > 60) return session;
   if (!session.refresh_token) {
-    await chrome.storage.local.remove(['session', 'bt_session']);
+    await clearSession();
     return null;
   }
   return refreshSession(session);
