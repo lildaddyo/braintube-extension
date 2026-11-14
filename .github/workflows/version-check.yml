@@ -1,4 +1,7 @@
 name: Version bump check
+# Read-only: reports whether manifest.json was bumped. It never builds, uploads or publishes.
+permissions:
+  contents: read
 on:
   pull_request:
     branches: [main]
@@ -47,7 +50,9 @@ jobs:
           NEW=$(node -p "require('./manifest.json').version")
           OLD=$(git show origin/main:manifest.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
           if [ "$NEW" = "$OLD" ]; then
-            echo "::error::Shippable code changed but manifest version not bumped. Old: $OLD, New: $NEW"
-            exit 1
+            # Advisory only: the version is set by the release lane, not by every feature PR,
+            # and nothing publishes on merge (publish.yml is manual). Bump before running publish.
+            echo "::warning::Shippable code changed and manifest version is still $OLD. Bump it before the next manual publish."
+            exit 0
           fi
           echo "Version bump OK: $OLD then $NEW"
