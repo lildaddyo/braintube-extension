@@ -1,0 +1,182 @@
+<!doctype html>
+<!-- Chrome Web Store screenshots (1280x800): brand frame on the left, the REAL popup / side panel on the right
+     (served with mock-chrome.js). ?n=1..5&lang=en|ko. Render with store/shots/render.mjs or a browser at 1280x800. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Fraunces'; src: url('/fonts/Fraunces-Bold.woff2') format('woff2'); font-weight: 700; }
+  @font-face { font-family: 'Fraunces'; src: url('/fonts/Fraunces-Regular.woff2') format('woff2'); font-weight: 400; }
+  @font-face { font-family: 'Space Grotesk'; src: url('/fonts/SpaceGrotesk-Medium.woff2') format('woff2'); font-weight: 500; }
+  @font-face { font-family: 'Space Grotesk'; src: url('/fonts/SpaceGrotesk-SemiBold.woff2') format('woff2'); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse at 30% 0%, #2a1a4a 0%, #1a0f33 35%, #0d0a1f 70%, #07060f 100%);
+    color: #f5f0ff; font-family: 'Fraunces', Georgia, serif; position: relative;
+  }
+  :lang(ko) body, :lang(ko) .h1, :lang(ko) .sub { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif; word-break: keep-all; }
+  .copy { position: absolute; left: 72px; top: 0; bottom: 0; width: 430px; display: flex; flex-direction: column; justify-content: center; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 44px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px; letter-spacing: 0.5px; }
+  .brand img { width: 40px; height: 40px; border-radius: 9px; }
+  .eyebrow { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: #a78bfa; margin-bottom: 18px; }
+  .h1 { font-weight: 700; font-size: 50px; line-height: 1.08; letter-spacing: -0.5px; margin-bottom: 22px; }
+  .h1 em { font-style: italic; color: #a78bfa; font-weight: 700; }
+  :lang(ko) .h1 { font-size: 44px; line-height: 1.25; letter-spacing: -1px; }
+  .sub { font-size: 20px; line-height: 1.5; color: #b8a8d9; }
+  :lang(ko) .sub { font-size: 19px; }
+  .foot { position: absolute; left: 72px; bottom: 40px; font-family: 'Space Grotesk', sans-serif; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: #8a7dab; }
+
+  /* browser window */
+  .win { position: absolute; left: 560px; top: 70px; width: 680px; height: 660px; border-radius: 14px; overflow: hidden;
+         background: #0f0f12; box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(167,139,250,0.25); }
+  .chrome-bar { height: 44px; background: #1d1b24; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+  .dots i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #4a4458; margin-right: 6px; }
+  .url { flex: 1; height: 26px; border-radius: 13px; background: #2b2836; color: #b8b2c8; font: 13px system-ui, sans-serif; display: flex; align-items: center; padding: 0 14px; }
+  .ext { width: 26px; height: 26px; border-radius: 6px; background: rgba(167,139,250,0.25); display: grid; place-items: center; }
+  .ext img { width: 18px; height: 18px; }
+  .page { position: absolute; top: 44px; left: 0; right: 0; bottom: 0; font-family: system-ui, sans-serif; }
+
+  /* video page */
+  .player { margin: 18px; height: 300px; border-radius: 10px; position: relative; overflow: hidden;
+            background: radial-gradient(circle at 30% 40%, #3b2a6b 0%, #1c1430 55%, #0c0a14 100%); }
+  .player::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-40%,-50%);
+                   border-left: 38px solid rgba(255,255,255,0.85); border-top: 24px solid transparent; border-bottom: 24px solid transparent; }
+  .player .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.15); }
+  .player .bar b { display: block; width: 38%; height: 100%; background: #a78bfa; }
+  .vtitle { margin: 0 18px; color: #f1f1f1; font-size: 19px; font-weight: 600; line-height: 1.3; }
+  .vmeta { margin: 8px 18px; color: #9a96a6; font-size: 13px; }
+  .lines { margin: 16px 18px; }
+  .lines div { height: 10px; border-radius: 5px; background: #24212d; margin-bottom: 10px; }
+  /* article page */
+  .article { padding: 28px 34px; color: #e9e6f1; }
+  .article h2 { font: 700 26px Georgia, serif; margin-bottom: 10px; }
+  .article .by { color: #9a96a6; font-size: 13px; margin-bottom: 20px; }
+
+  /* the real extension UI */
+  iframe { position: absolute; border: 0; background: transparent; }
+  .popup { right: 16px; top: 52px; width: 380px; height: 560px; border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,0.6); background: #866CEF; }
+  .side { right: 0; top: 44px; width: 380px; height: 616px; box-shadow: -12px 0 40px rgba(0,0,0,0.5); background: #f9fafb; }
+  .page.with-side { right: 380px; }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand"><img src="/icons/icon-128.png" alt=""> BrainTube</div>
+    <div class="eyebrow" id="eyebrow"></div>
+    <div class="h1" id="h1"></div>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="foot" id="foot"></div>
+
+  <div class="win">
+    <div class="chrome-bar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <div class="url" id="url"></div>
+      <div class="ext"><img src="/icons/icon-32.png" alt=""></div>
+    </div>
+    <div class="page" id="page"></div>
+  </div>
+
+<script type="module">
+const q = new URLSearchParams(location.search);
+const n = Number(q.get('n') || 1);
+const lang = q.get('lang') === 'ko' ? 'ko' : 'en';
+document.documentElement.lang = lang;
+
+// Every claim below is VERIFIED in content-canon truth/braintube.md (2026-11-11) or the extension code:
+// saves + transcripts + automatic summaries free and unlimited (C-b73eb3cee8); Free 30 credits/month,
+// Starter 300, Pro 1,000 (C-3a1447a9b4, C-0d47f1a87f, C-dcf71816c7); MCP clients named per C-a0318bda81.
+const COPY = {
+  en: {
+    foot: 'brain-tube.com',
+    1: ['Chrome extension', 'Save any video <em>in one click.</em>', 'YouTube videos, articles and Claude or ChatGPT conversations go straight into your BrainTube library.'],
+    2: ['Ask AI', 'Ask the video. <em>Get the answer.</em>', 'Chat with the video you are watching, or with everything you have saved.'],
+    3: ['Summaries', 'The summary is ready <em>when you are.</em>', 'Every save gets a summary, key takeaways and a timestamped transcript. Saving and summaries are free.'],
+    4: ['Read later', 'Bookmark it now. <em>Find it later.</em>', 'Bookmark pages into a reading list in the side panel, with tags and an unread filter.'],
+    5: ['Plans', 'Free to start. <em>Room to grow.</em>', 'Unlimited saves and 30 AI credits a month on Free. Starter adds 300, Pro 1,000. Your plan and credits sit right in the popup.'],
+  },
+  ko: {
+    foot: 'brain-tube.com',
+    1: ['Chrome 확장 프로그램', '클릭 한 번으로 <em>바로 저장.</em>', 'YouTube 영상, 기사, Claude와 ChatGPT 대화를 BrainTube 라이브러리에 바로 저장해요.'],
+    2: ['AI 질문', '영상에 묻고 <em>바로 답을 받아요.</em>', '보고 있는 영상이나 저장한 내용 전체와 대화해 보세요.'],
+    3: ['요약', '저장하면 <em>요약이 준비돼요.</em>', '저장할 때마다 요약, 핵심 포인트, 타임스탬프가 있는 스크립트가 만들어져요. 저장과 요약은 무료예요.'],
+    4: ['나중에 읽기', '지금 북마크하고 <em>나중에 찾아요.</em>', '사이드 패널에서 태그와 읽지 않음 필터로 읽을거리를 관리해요.'],
+    5: ['요금제', '무료로 시작하고 <em>필요할 때 더.</em>', '무료 요금제는 무제한 저장과 매달 AI 크레딧 30개. 스타터는 300개, 프로는 1,000개예요. 요금제와 크레딧은 팝업에서 바로 확인해요.'],
+  },
+};
+const [eyebrow, h1, sub] = COPY[lang][n];
+document.getElementById('eyebrow').textContent = eyebrow;
+document.getElementById('h1').innerHTML = h1;
+document.getElementById('sub').textContent = sub;
+document.getElementById('foot').textContent = COPY[lang].foot;
+
+const VIDEO = lang === 'ko'
+  ? { title: '장기 기억은 어떻게 만들어질까? 신경과학자가 설명하는 기억의 원리', meta: '조회수 18만회 · 2주 전' }
+  : { title: 'How long-term memories form: a neuroscientist explains', meta: '184K views · 2 weeks ago' };
+const ARTICLE = lang === 'ko'
+  ? { title: '간격 반복 실전 가이드', by: 'example.com · 8분 분량' }
+  : { title: 'A practical guide to spaced repetition', by: 'example.com · 8 min read' };
+
+const page = document.getElementById('page');
+const url = document.getElementById('url');
+const win = document.querySelector('.win');
+const videoPage = () => {
+  url.textContent = 'youtube.com/watch?v=Kq3mPz8Lr2Q';
+  page.innerHTML = `<div class="player"><div class="bar"><b></b></div></div><div class="vtitle">${VIDEO.title}</div><div class="vmeta">${VIDEO.meta}</div><div class="lines"><div style="width:90%"></div><div style="width:70%"></div><div style="width:80%"></div></div>`;
+};
+const articlePage = () => {
+  url.textContent = 'example.com/blog/spaced-repetition-guide';
+  page.innerHTML = `<div class="article"><h2>${ARTICLE.title}</h2><div class="by">${ARTICLE.by}</div><div class="lines" style="margin:0"><div style="width:96%"></div><div style="width:88%"></div><div style="width:92%"></div><div style="width:60%"></div><div style="width:94%"></div><div style="width:85%"></div><div style="width:90%"></div><div style="width:40%"></div></div></div>`;
+};
+const frame = (cls, src) => {
+  const f = document.createElement('iframe');
+  f.className = cls;
+  f.src = `${src}&lang=${lang}`;
+  win.appendChild(f);
+  return new Promise((r) => f.addEventListener('load', () => setTimeout(() => r(f), 700)));
+};
+const side = (s) => { page.classList.add('with-side'); return frame('side', `/sidepanel.html?s=${s}`); };
+
+window.__ready = false;
+(async () => {
+  if (n === 1) { videoPage(); await frame('popup', '/popup.html?s=yt-free'); }
+  if (n === 2) {
+    videoPage();
+    const f = await side('sp-chat');
+    const d = f.contentDocument;
+    d.getElementById('chat-input').value = lang === 'ko' ? '수면이 기억에 어떤 역할을 해요?' : 'What does sleep do for memory?';
+    d.getElementById('chat-send').click();
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  if (n === 3) {
+    videoPage();
+    const f = await side('sp-summary');
+    f.contentDocument.querySelector('.tab[data-tab="summary"]').click();
+  }
+  if (n === 4) {
+    videoPage();
+    const f = await side('sp-bookmarks');
+    f.contentDocument.querySelector('.tab[data-tab="bookmarks"]').click();
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  if (n === 5) {
+    videoPage();
+    const f = await frame('popup', '/popup.html?s=yt-nudge');
+    f.contentDocument.getElementById('save-video-btn').click(); // 5th save → the real save prompt
+    await new Promise((r) => setTimeout(r, 900));
+    f.contentDocument.getElementById('toast').style.display = 'none';
+  }
+  const pop = document.querySelector('iframe.popup');
+  if (pop) {
+    const h = pop.contentDocument.querySelector('.container').scrollHeight;
+    pop.style.height = `${h}px`;
+    const room = 660 - 52 - 16; // inside the window, below the toolbar
+    if (h > room) { pop.style.transformOrigin = 'top right'; pop.style.transform = `scale(${(room / h).toFixed(3)})`; }
+  }
+  await document.fonts.ready;
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

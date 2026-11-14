@@ -17,6 +17,7 @@ export const CONFIG = {
     ASK_ITEM_AI: '/functions/v1/ask-item-ai',
     CORPUS_CHAT: '/functions/v1/ai-router',
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
+    CHECK_CREDITS: '/functions/v1/check-credits',
     TRACK: '/functions/v1/track',
     
     // Direct database access

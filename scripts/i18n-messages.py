@@ -6,9 +6,9 @@ import json, os, re
 M = [
     # key, English (must match the shipped UI exactly), Korean
     ("htmlLang", "en", "ko"),
-    ("extName", "BrainTube - YouTube Knowledge Base", "BrainTube - YouTube 지식 베이스"),
-    ("extDescription", "Save YouTube videos, get AI summaries, and search your knowledge base.",
-     "YouTube 영상을 저장하고 AI 요약을 받아 보세요. 내 지식 베이스도 바로 검색할 수 있어요."),
+    ("extName", "BrainTube: Save YouTube Videos & Ask Your Library", "BrainTube: YouTube 영상 저장하고 AI에게 질문하기"),
+    ("extDescription", "Save YouTube videos, articles and AI chats in one click. Ask questions across your library, or use it in Claude, ChatGPT and Cursor.",
+     "YouTube 영상, 기사, AI 대화를 클릭 한 번으로 저장하고 라이브러리 전체에 질문해 보세요. Claude, ChatGPT, Cursor에서도 쓸 수 있어요."),
     ("saveToBrainTube", "Save to BrainTube", "BrainTube에 저장"),
 
     # popup
@@ -156,6 +156,31 @@ M = [
      "중지됨: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패."),
     ("xImportError", "Import stopped: $ERROR$", "가져오기가 중지됐어요: $ERROR$"),
     ("xImportAgain", "Import again", "다시 가져오기"),
+
+    # plan, credits and upgrade prompts (popup + side panel). Plan names per GLOSSARY: 무료 / 스타터 / 프로.
+    ("planFree", "Free", "무료"),
+    ("planStarter", "Starter", "스타터"),
+    ("planPro", "Pro", "프로"),
+    ("planProPlus", "Pro+", "프로+"),
+    ("planTrial", "Pro trial", "프로 무료 체험"),
+    ("creditsLeft", "$COUNT$ credits left", "크레딧 $COUNT$개 남음"),
+    ("creditsTrialEnds", "$COUNT$ credits · ends $DATE$", "크레딧 $COUNT$개 · $DATE$ 종료"),
+    ("upgrade", "Upgrade", "업그레이드"),
+    ("keepPro", "Keep Pro", "프로 계속 쓰기"),
+    ("seePlans", "See plans", "요금제 보기"),
+    ("notNow", "Not now", "나중에"),
+    ("limitTitle", "You're out of AI credits", "AI 크레딧을 다 썼어요"),
+    ("limitBody", "Saving and summaries stay free. Starter gives you $STARTER$ AI credits a month, Pro $PRO$, for Ask AI, quizzes and more.",
+     "저장과 요약은 계속 무료예요. 스타터는 매달 AI 크레딧 $STARTER$개, 프로는 $PRO$개를 드려요. AI 질문, 퀴즈 등에 쓸 수 있어요."),
+    ("limitBodyTrial", "Saving and summaries stay free. Keep Pro to get 1,000 AI credits every month.",
+     "저장과 요약은 계속 무료예요. 프로를 계속 쓰면 매달 AI 크레딧 1,000개를 받아요."),
+    ("nudgeTitle", "You've saved $COUNT$ things to BrainTube", "BrainTube에 $COUNT$개를 저장했어요"),
+    ("nudgeBody", "Ask questions across all of them. Pro gives you $PRO$ AI credits a month; Free has $FREE$.",
+     "저장한 내용 전체에 질문해 보세요. 프로는 매달 AI 크레딧 $PRO$개, 무료는 $FREE$개예요."),
+    ("nudgeBodyTrial", "Your Pro trial is on. Keep Pro so your library keeps its AI chat, summaries and quizzes.",
+     "지금 프로 무료 체험 중이에요. 프로를 계속 쓰면 AI 채팅, 요약, 퀴즈를 그대로 쓸 수 있어요."),
+    ("rateLimited", "Too many saves right now. Try again in a few minutes.", "지금은 저장 요청이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."),
+    ("chatRateLimited", "Too many questions right now. Try again in a few minutes.", "지금은 질문이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."),
 ]
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "_locales")

@@ -43,6 +43,26 @@
     
     <!-- Main Section -->
     <div id="main" class="section" style="display: none;">
+      <!-- Plan + credits (filled by popup.js from check-subscription / check-credits) -->
+      <div id="plan-bar" class="plan-bar" style="display: none;">
+        <div class="plan-info">
+          <span id="plan-badge" class="plan-badge"></span>
+          <span id="credit-count" class="credit-count"></span>
+        </div>
+        <button class="btn-upgrade" id="upgrade-btn" style="display: none;"></button>
+        <div class="credit-meter" id="credit-meter"><div class="credit-meter-fill" id="credit-meter-fill"></div></div>
+      </div>
+
+      <!-- Upgrade prompt: credits ran out, or after N saves (free / trial users only) -->
+      <div id="upgrade-card" class="card upgrade-card" style="display: none;">
+        <div class="upgrade-title" id="upgrade-title"></div>
+        <div class="upgrade-body" id="upgrade-body"></div>
+        <div class="card-actions">
+          <button class="btn-primary btn-sm" id="upgrade-card-btn" data-i18n="seePlans">See plans</button>
+          <button class="btn-secondary btn-sm" id="upgrade-dismiss-btn" data-i18n="notNow">Not now</button>
+        </div>
+      </div>
+
       <!-- Search Bar -->
       <input 
         type="text" 
