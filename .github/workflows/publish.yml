@@ -1,0 +1,141 @@
+name: Publish to Chrome Web Store
+# Manual only. Nothing publishes on push, merge or tag: a release is a person running this
+# workflow from main with confirm=publish (Actions > Publish to Chrome Web Store > Run workflow).
+# It uploads the zip AND submits it for review, which ships to every user once Google approves.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish" to upload this build to the Chrome Web Store and submit it for review'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: write # the GitHub release at the end
+
+concurrency:
+  group: cws-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard (confirm=publish, main only)
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$CONFIRM" != "publish" ]; then
+            echo "::error::Refusing to publish: input confirm must be exactly 'publish' (got '$CONFIRM')."
+            exit 1
+          fi
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing to publish from $REF: run this workflow on main."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read manifest version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version $VERSION"
+
+      - name: Refuse a version that was already released
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release v$VERSION already exists. Bump manifest.json first."
+            exit 1
+          fi
+
+      - name: Build extension ZIP
+        run: |
+          zip -r braintube-extension-v${{ steps.version.outputs.version }}.zip . \
+            -x "*.git*" \
+            -x "node_modules/*" \
+            -x ".github/*" \
+            -x "store/*" \
+            -x "spikes/*" \
+            -x "scripts/strip-bg.js" \
+            -x "*.test.mjs" \
+            -x "*.py" \
+            -x "package.json" \
+            -x "package-lock.json" \
+            -x "*.md" \
+            -x "fonts/*.txt"
+          ls -la *.zip
+
+      - name: Get OAuth access token
+        id: auth
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          TOKEN=$(curl -sS -X POST "https://oauth2.googleapis.com/token" \
+            --data-urlencode "client_id=$CWS_CLIENT_ID" \
+            --data-urlencode "client_secret=$CWS_CLIENT_SECRET" \
+            --data-urlencode "refresh_token=$CWS_REFRESH_TOKEN" \
+            -d "grant_type=refresh_token" \
+            | jq -r '.access_token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Failed to get access token"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Upload to Chrome Web Store
+        env:
+          TOKEN: ${{ steps.auth.outputs.token }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          UPLOAD_RESPONSE=$(curl -sS -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -T "braintube-extension-v${{ steps.version.outputs.version }}.zip" \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$EXTENSION_ID")
+          echo "Upload response: $UPLOAD_RESPONSE"
+          STATUS=$(echo "$UPLOAD_RESPONSE" | jq -r '.uploadState')
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "::error::Upload failed: $UPLOAD_RESPONSE"
+            exit 1
+          fi
+
+      - name: Submit for review
+        env:
+          TOKEN: ${{ steps.auth.outputs.token }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          PUBLISH_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/$EXTENSION_ID/publish")
+          echo "Publish response: $PUBLISH_RESPONSE"
+          STATUS=$(echo "$PUBLISH_RESPONSE" | jq -r '.status[]?')
+          if echo "$STATUS" | grep -q "OK"; then
+            echo "Submitted for review successfully"
+          else
+            echo "::error::Submit failed: $PUBLISH_RESPONSE"
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: |
+            Published by a manual run of the publish workflow (confirm=publish) by ${{ github.actor }}.
+            Submitted to Chrome Web Store review; wait ~24h for Google approval.
+            Track status: https://chrome.google.com/webstore/devconsole
+          files: braintube-extension-v${{ steps.version.outputs.version }}.zip

@@ -1,5 +1,5 @@
 // BrainTube Extension - Service Worker
-import { trackEvent, saveUrl } from './api.js';
+import { trackEvent, saveUrl, transcribeAudio, processContent, RateLimitError } from './api.js';
 import './x-parse.js'; // defines globalThis.btX (postText, postTitle)
 import { CONFIG, getValidSession, pinFunctionUrl } from './config.js';
 import { captureContentLanguage } from './content-language.js';
@@ -78,6 +78,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async
   }
 
+  // Instagram "Import this page": one post at a time from ig-import.js
+  if (message.type === 'IG_IMPORT_ITEM') {
+    importInstagramItem(message.item, sender.tab?.id)
+      .then(result => sendResponse({ ok: true, ...result }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
+
   // X "Import bookmarks": one post at a time from x-import.js
   if (message.type === 'X_IMPORT_ITEM') {
     importXPost(message.post)
@@ -94,6 +102,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async
   }
 });
+
+// ── Instagram import ──────────────────────────────────────────────────────────
+
+// Retries a call that hit a server rate limit, telling the page how long it waits.
+async function withRateLimitWait(fn, tabId) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!(err instanceof RateLimitError) || attempt >= 20) throw err;
+      const ms = Math.min(err.retryAfterMs, 15 * 60 * 1000);
+      if (tabId) chrome.tabs.sendMessage(tabId, { type: 'IG_IMPORT_WAIT', ms }).catch(() => {});
+      await new Promise(r => setTimeout(r, ms));
+    }
+  }
+}
+
+async function importInstagramItem(item, tabId) {
+  const session = await getValidSession().catch(() => null);
+  if (!session?.access_token) throw new Error('NOT_LOGGED_IN');
+
+  let transcript = '';
+  if (item.audio) {
+    // A failed transcription still saves the post with its caption.
+    try {
+      transcript = await withRateLimitWait(() => transcribeAudio(item.audio, 'audio/mp4'), tabId);
+    } catch (err) {
+      if (err.message === 'SESSION_EXPIRED') throw err;
+      console.warn('[BrainTube] IG transcription failed:', err.message);
+    }
+  }
+  const saved = await withRateLimitWait(() => processContent({
+    url: item.url,
+    title: item.title,
+    text: item.caption,
+    mediaTranscript: transcript,
+  }), tabId);
+  if (saved?.error) throw new Error(saved.error);
+  return { transcribed: transcript.length > 0, itemId: saved?.item?.id || saved?.id || null };
+}
 
 // ── AI Conversation Capture ───────────────────────────────────────────────────
 

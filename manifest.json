@@ -21,7 +21,9 @@
     "https://*.supabase.co/*",
     "https://claude.ai/*",
     "https://chatgpt.com/*",
-    "https://braintube-mcp-production.up.railway.app/*"
+    "https://braintube-mcp-production.up.railway.app/*",
+    "https://www.instagram.com/*",
+    "https://*.fbcdn.net/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://braintube-mcp-production.up.railway.app https://www.youtube.com https://*.youtube.com"
@@ -71,6 +73,17 @@
     {
       "matches": ["https://x.com/*"],
       "js": ["scripts/x-import.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["scripts/ig-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["scripts/ig-import.js"],
       "run_at": "document_idle"
     }
   ],
