@@ -3,10 +3,10 @@
     "message": "en"
   },
   "extName": {
-    "message": "BrainTube - YouTube Knowledge Base"
+    "message": "BrainTube: Save YouTube Videos & Ask Your Library"
   },
   "extDescription": {
-    "message": "Save YouTube videos, get AI summaries, and search your knowledge base."
+    "message": "Save YouTube videos, articles and AI chats in one click. Ask questions across your library, or use it in Claude, ChatGPT and Cursor."
   },
   "saveToBrainTube": {
     "message": "Save to BrainTube"

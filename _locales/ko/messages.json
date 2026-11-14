@@ -3,10 +3,10 @@
     "message": "ko"
   },
   "extName": {
-    "message": "BrainTube - YouTube 지식 베이스"
+    "message": "BrainTube: YouTube 영상 저장하고 AI에게 질문하기"
   },
   "extDescription": {
-    "message": "YouTube 영상을 저장하고 AI 요약을 받아 보세요. 내 지식 베이스도 바로 검색할 수 있어요."
+    "message": "YouTube 영상, 기사, AI 대화를 클릭 한 번으로 저장하고 라이브러리 전체에 질문해 보세요. Claude, ChatGPT, Cursor에서도 쓸 수 있어요."
   },
   "saveToBrainTube": {
     "message": "BrainTube에 저장"

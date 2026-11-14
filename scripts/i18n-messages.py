@@ -6,9 +6,9 @@ import json, os, re
 M = [
     # key, English (must match the shipped UI exactly), Korean
     ("htmlLang", "en", "ko"),
-    ("extName", "BrainTube - YouTube Knowledge Base", "BrainTube - YouTube 지식 베이스"),
-    ("extDescription", "Save YouTube videos, get AI summaries, and search your knowledge base.",
-     "YouTube 영상을 저장하고 AI 요약을 받아 보세요. 내 지식 베이스도 바로 검색할 수 있어요."),
+    ("extName", "BrainTube: Save YouTube Videos & Ask Your Library", "BrainTube: YouTube 영상 저장하고 AI에게 질문하기"),
+    ("extDescription", "Save YouTube videos, articles and AI chats in one click. Ask questions across your library, or use it in Claude, ChatGPT and Cursor.",
+     "YouTube 영상, 기사, AI 대화를 클릭 한 번으로 저장하고 라이브러리 전체에 질문해 보세요. Claude, ChatGPT, Cursor에서도 쓸 수 있어요."),
     ("saveToBrainTube", "Save to BrainTube", "BrainTube에 저장"),
 
     # popup
