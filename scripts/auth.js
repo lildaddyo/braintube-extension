@@ -1,5 +1,6 @@
 // BrainTube Extension - Authentication Module
-import { CONFIG, buildUrl } from './config.js';
+import { CONFIG, buildUrl, getValidSession } from './config.js';
+import { t } from './i18n.js';
 
 // Sign in with email/password
 export async function signIn(email, password) {
@@ -18,13 +19,13 @@ export async function signIn(email, password) {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error_description || error.msg || 'Sign in failed');
+      throw new Error(error.error_description || error.msg || t('signInFailed'));
     }
     
     const data = await response.json();
     await saveSession(data);
     
-    console.log('✅ Signed in:', data.user.email);
+    console.log('✅ Signed in');
     return data;
   } catch (error) {
     console.error('❌ Sign in error:', error);
@@ -41,8 +42,11 @@ export async function saveSession(session) {
 
 // Get current session — checks bt_session (Google OAuth) then session (email/password)
 export async function getSession() {
-  const result = await chrome.storage.local.get(['session', 'bt_session']);
-  return result.bt_session || result.session || null;
+  try {
+    return await getValidSession();
+  } catch {
+    return null;
+  }
 }
 
 // Sign out — clears both session keys

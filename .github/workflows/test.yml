@@ -1,0 +1,18 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Manifest parses and keeps the Web Store key
+        run: node -e "const m=require('./manifest.json'); if(!m.key||!m.version) process.exit(1); console.log(m.version)"
+      - name: Scripts parse as ES modules
+        run: for f in scripts/*.js; do cp "$f" "/tmp/$(basename "$f" .js).mjs"; node --check "/tmp/$(basename "$f" .js).mjs"; done
+      - run: npm test

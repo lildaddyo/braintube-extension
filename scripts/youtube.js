@@ -1,4 +1,5 @@
 // BrainTube Extension - YouTube Utilities
+import { routeForUrl } from './routing.js';
 
 // Extract video ID from YouTube URL
 export function extractVideoId(url) {
@@ -19,19 +20,16 @@ export function extractVideoId(url) {
   return null;
 }
 
-// Get current YouTube video info
+// Get current YouTube video info (watch, Shorts, live and youtu.be pages; not playlists or channels)
 export async function getCurrentVideoInfo(tab) {
-  if (!tab || !tab.url?.includes('youtube.com/watch')) {
-    return null;
-  }
-  
-  const videoId = extractVideoId(tab.url);
-  if (!videoId) return null;
-  
+  const route = tab?.url ? routeForUrl(tab.url) : null;
+  if (route?.fn !== 'process-youtube') return null;
+
   return {
-    url: tab.url,
-    videoId: videoId,
-    title: tab.title?.replace(' - YouTube', '') || 'YouTube Video'
+    url: route.body.url,
+    videoId: route.videoId,
+    isYouTubeMusic: route.body.isYouTubeMusic === true,
+    title: tab.title?.replace(/ - YouTube( Music)?$/, '') || 'YouTube Video'
   };
 }
 

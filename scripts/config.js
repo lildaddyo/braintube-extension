@@ -2,19 +2,23 @@
 
 export const CONFIG = {
   SUPABASE_URL: 'https://iqjnmmtvhyavgrsxpoao.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE',
-  WEB_APP_URL: 'https://brain-tube.com',
+  SUPABASE_ANON_KEY: 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1',
+  // The web app lives on app.brain-tube.com; brain-tube.com is the marketing
+  // site and returns 404 for /library and /search.
+  WEB_APP_URL: 'https://app.brain-tube.com',
   
   // API Endpoints
   ENDPOINTS: {
     PROCESS_YOUTUBE: '/functions/v1/process-youtube',
+    PROCESS_CONTENT: '/functions/v1/process-content',
     GENERATE_SUMMARY: '/functions/v1/generate-summary',
     QUICK_SEARCH: '/functions/v1/quick-search',
     SEARCH: '/functions/v1/search',
-    CHAT: '/functions/v1/chat',
+    ASK_ITEM_AI: '/functions/v1/ask-item-ai',
+    CORPUS_CHAT: '/functions/v1/ai-router',
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
+    CHECK_CREDITS: '/functions/v1/check-credits',
     TRACK: '/functions/v1/track',
-    PROCESS_CONTENT: '/functions/v1/process-content',
     WHISPER_TRANSCRIBE: '/functions/v1/whisper-transcribe',
     
     // Direct database access
@@ -45,27 +49,92 @@ export const CONFIG = {
   }
 };
 
-// Helper to build full URL
-export function buildUrl(endpoint) {
-  return `${CONFIG.SUPABASE_URL}${endpoint}`;
+// The database region (eu-west-1, Ireland). Supabase runs an edge function in the region nearest the
+// caller unless told otherwise, so a call from Asia ran brain-chat and every function it calls far from
+// the database (p50 17-22 s vs 1.5 s, edge logs 2026-11-02). Same pin as the web app
+// (dark-n-cozy src/lib/function-region.ts): the query parameter, not the x-region header, which the
+// functions' CORS doesn't allow.
+export const FUNCTION_REGION = 'eu-west-1';
+
+// Adds forceFunctionRegion to an edge function URL that has none; any other URL comes back unchanged.
+export function pinFunctionUrl(url) {
+  if (!url.includes('/functions/v1/') || url.includes('forceFunctionRegion=')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}forceFunctionRegion=${FUNCTION_REGION}`;
 }
 
-// Helper to get auth headers — checks bt_session (Google OAuth) then session (email/password)
+// Helper to build full URL (edge functions pinned to the database region)
+export function buildUrl(endpoint) {
+  return pinFunctionUrl(`${CONFIG.SUPABASE_URL}${endpoint}`);
+}
+
+// Helper to get auth headers — uses a fresh (auto-refreshed) access token
 export async function getHeaders() {
-  const all = await chrome.storage.local.get(null);
-  console.log('[BrainTube] config.getHeaders — ALL storage keys:', Object.keys(all));
-  const session = all['bt_session'] || all['session'];
-  const accessToken = session?.access_token;
-  console.log('[BrainTube] config.getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', accessToken ? accessToken.substring(0, 20) + '...' : 'MISSING');
+  const session = await getValidSession();
   return {
-    'Authorization': `Bearer ${accessToken}`,
+    'Authorization': `Bearer ${session?.access_token}`,
     'Content-Type': 'application/json',
     'apikey': CONFIG.SUPABASE_ANON_KEY
   };
 }
 
-// Helper to get the current session — checks bt_session then session
+// Helper to get the current session as stored — checks bt_session then session
 export async function getSession() {
   const stored = await chrome.storage.local.get(['bt_session', 'session']);
   return stored.bt_session || stored.session || null;
+}
+
+// Seconds-since-epoch expiry of a session's access token (JWT exp claim, else expires_at).
+function tokenExpiry(session) {
+  try {
+    const payload = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const exp = JSON.parse(atob(payload)).exp;
+    if (exp) return exp;
+  } catch { /* fall through */ }
+  return session.expires_at || 0;
+}
+
+let refreshInFlight = null;
+
+// Exchange the refresh token for a new session and store it under both keys.
+// A rejected refresh token (revoked, or already rotated) clears the session so the UI asks to sign in again.
+export async function refreshSession(session) {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const res = await fetch(buildUrl(`${CONFIG.ENDPOINTS.AUTH}/token?grant_type=refresh_token`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.access_token) {
+        if (res.status >= 400 && res.status < 500) {
+          await chrome.storage.local.remove(['session', 'bt_session']);
+        }
+        throw new Error('Session expired — please sign in again');
+      }
+      const fresh = {
+        access_token:  data.access_token,
+        refresh_token: data.refresh_token,
+        expires_in:    data.expires_in ?? 3600,
+        expires_at:    data.expires_at,
+        token_type:    'bearer',
+        user:          data.user || session.user,
+      };
+      await chrome.storage.local.set({ bt_session: fresh, session: fresh });
+      return fresh;
+    })().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+// The current session with an access token valid for at least another minute, or null if signed out.
+export async function getValidSession() {
+  const session = await getSession();
+  if (!session?.access_token) return null;
+  if (tokenExpiry(session) - Date.now() / 1000 > 60) return session;
+  if (!session.refresh_token) {
+    await chrome.storage.local.remove(['session', 'bt_session']);
+    return null;
+  }
+  return refreshSession(session);
 }

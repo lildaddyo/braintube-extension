@@ -1,6 +1,8 @@
 // BrainTube Extension - Service Worker
-import { trackEvent, transcribeAudio, processContent, RateLimitError } from './api.js';
-import { CONFIG } from './config.js';
+import { trackEvent, saveUrl, transcribeAudio, processContent, RateLimitError } from './api.js';
+import './x-parse.js'; // defines globalThis.btX (postText, postTitle)
+import { CONFIG, getValidSession, pinFunctionUrl } from './config.js';
+import { captureContentLanguage } from './content-language.js';
 
 console.log('🧠 BrainTube service worker started');
 
@@ -11,17 +13,37 @@ chrome.runtime.onInstalled.addListener((details) => {
   // Create context menu
   chrome.contextMenus.create({
     id: 'save-to-braintube',
-    title: 'Save to BrainTube',
+    title: chrome.i18n.getMessage('saveToBrainTube'),
     contexts: ['page', 'link'],
     documentUrlPatterns: ['*://www.youtube.com/watch*', '*://youtu.be/*']
   });
   
   if (details.reason === 'install') {
-    trackEvent('extension_installed', { 
-      version: chrome.runtime.getManifest().version 
-    });
+    // The track endpoint needs a signed-in user, and nobody is signed in at install time (it answered 401
+    // and the install was never recorded). Remember the install and report it once a session exists.
+    chrome.storage.local
+      .set({ bt_install_pending: { version: chrome.runtime.getManifest().version, at: new Date().toISOString() } })
+      .then(reportPendingInstall);
   }
 });
+
+// Sends the remembered install once there is a session; keeps it for the next sign-in if the call fails.
+async function reportPendingInstall() {
+  const { bt_install_pending: pending, bt_session: session } = await chrome.storage.local.get(['bt_install_pending', 'bt_session']);
+  if (!pending || !session) return;
+  const ok = await trackEvent('extension_installed', { version: pending.version, installed_at: pending.at });
+  if (ok) await chrome.storage.local.remove('bt_install_pending');
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.bt_session && changes.bt_session.newValue) {
+    reportPendingInstall();
+    captureContentLanguage(changes.bt_session.newValue);
+  }
+});
+
+// An account already signed in when this version starts: the same once-per-account capture.
+chrome.storage.local.get('bt_session').then(({ bt_session: session }) => captureContentLanguage(session));
 
 // Context menu handler
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -63,6 +85,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true; // async
   }
+
+  // X "Import bookmarks": one post at a time from x-import.js
+  if (message.type === 'X_IMPORT_ITEM') {
+    importXPost(message.post)
+      .then((r) => sendResponse({ ok: true, duplicate: r.duplicate === true }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
+
+  // Playlist-add event — relayed from content-playlist-watcher.js
+  if (message.type === 'PLAYLIST_ADD_EVENT') {
+    syncPlaylist(message.youtube_playlist_id)
+      .then(() => sendResponse({ ok: true }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
 });
 
 // ── Instagram import ──────────────────────────────────────────────────────────
@@ -82,8 +120,8 @@ async function withRateLimitWait(fn, tabId) {
 }
 
 async function importInstagramItem(item, tabId) {
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  if (!(stored.bt_session || stored.session)?.access_token) throw new Error('NOT_LOGGED_IN');
+  const session = await getValidSession().catch(() => null);
+  if (!session?.access_token) throw new Error('NOT_LOGGED_IN');
 
   let transcript = '';
   if (item.audio) {
@@ -144,8 +182,7 @@ async function saveAiConversation(tabId, platform) {
   }
 
   // Get auth token
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  const token  = (stored.bt_session || stored.session)?.access_token;
+  const token  = (await getValidSession().catch(() => null))?.access_token;
   if (!token) throw new Error('NOT_LOGGED_IN');
 
   // POST to BrainTube
@@ -171,6 +208,36 @@ async function saveAiConversation(tabId, platform) {
   return resp.json();
 }
 
+// ── Playlist sync ─────────────────────────────────────────────────────────────
+
+const SUPABASE_URL       = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
+const SYNC_PLAYLIST_URL  = pinFunctionUrl(`${SUPABASE_URL}/functions/v1/youtube-sync-playlist`);
+
+async function syncPlaylist(youtubePlaylistId) {
+  if (!youtubePlaylistId) return;
+
+  const token  = (await getValidSession().catch(() => null))?.access_token;
+  if (!token) {
+    console.log('[BrainTube] syncPlaylist: not logged in, skipping');
+    return;
+  }
+
+  const resp = await fetch(SYNC_PLAYLIST_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ playlist_id: youtubePlaylistId }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error ?? `Sync failed ${resp.status}`);
+  }
+  console.log('[BrainTube] playlist sync queued:', youtubePlaylistId);
+}
+
 // Tab updates - update badge
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url?.includes('youtube.com/watch')) {
@@ -179,3 +246,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     chrome.action.setBadgeText({ tabId, text: '' });
   }
 });
+
+// ── X bookmarks import ────────────────────────────────────────────────────────
+
+// Saves one bookmarked X post. The browser already has the post's full text (long posts included,
+// which X's public page often hides), so it goes in as page_text; the server still reads the link.
+async function importXPost(post) {
+  if (!post?.id || !/^\d+$/.test(String(post.id))) throw new Error('Bad post');
+  const session = await getValidSession().catch(() => null);
+  if (!session?.access_token) throw new Error('NOT_LOGGED_IN');
+  const url = `https://x.com/${post.author || 'i/web'}/status/${post.id}`;
+  const r = await saveUrl(url, { page: { title: globalThis.btX.postTitle(post), text: globalThis.btX.postText(post) } });
+  return { duplicate: r.duplicate === true, itemId: r.itemId };
+}

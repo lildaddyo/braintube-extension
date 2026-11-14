@@ -11,11 +11,15 @@
 //   Popup detects session via chrome.storage.onChanged — no new tabs opened.
 
 const SUPABASE_URL  = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxam5tbXR2aHlhdmdyc3hwb2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTE1NTEsImV4cCI6MjA4NzE4NzU1MX0.GF31S85XbTzYSHjWxjTasXguJ5GwasyQgdsLR9fBJtE';
+const SUPABASE_ANON = 'sb_publishable_DNbHoP91pM0GRnLcEoOi_A_S2mz5eP1';
 const GOOGLE_CLIENT_ID = '605016349499-803pbseargk44vm20k6qgv1th7fqsarm.apps.googleusercontent.com';
 
 const statusEl  = document.getElementById('status');
 const spinnerEl = document.getElementById('spinner');
+
+document.documentElement.lang = chrome.i18n.getMessage('htmlLang') || 'en';
+document.title       = chrome.i18n.getMessage('authPageTitle') || document.title;
+statusEl.textContent = chrome.i18n.getMessage('connectingGoogle') || statusEl.textContent;
 
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg;
@@ -64,7 +68,7 @@ async function runGoogleAuth() {
   url.searchParams.set('nonce',         hashedNonce); // hashed → Google embeds in JWT
 
   console.log('[BrainTube] Google OAuth URL (no secret):', url.origin + url.pathname + '?client_id=...&response_type=id_token&redirect_uri=' + redirectUri);
-  setStatus('Waiting for Google sign-in…');
+  setStatus(chrome.i18n.getMessage('waitingGoogle'));
 
   chrome.identity.launchWebAuthFlow(
     { url: url.href, interactive: true },
@@ -72,13 +76,12 @@ async function runGoogleAuth() {
       if (chrome.runtime.lastError || !redirectedTo) {
         const err = chrome.runtime.lastError?.message ?? 'Sign-in cancelled';
         console.error('[BrainTube] launchWebAuthFlow error:', err);
-        setStatus('Sign-in cancelled or failed. You can close this tab.', true);
+        setStatus(chrome.i18n.getMessage('signInCancelledTab'), true);
         return;
       }
 
-      console.log('[BrainTube] Full redirect URL:', redirectedTo);
-      console.log('[BrainTube] Hash:',   redirectedTo.split('#')[1] ?? 'none');
-      console.log('[BrainTube] Search:', redirectedTo.split('?')[1] ?? 'none');
+      // Never log the redirect URL or its hash/query: the hash carries the
+      // Google id_token. Log only which parameter names came back.
 
       // Google returns id_token in the URL hash fragment.
       // Do NOT use new URL().hash — it keeps the leading '#', which makes the
@@ -87,16 +90,16 @@ async function runGoogleAuth() {
       const params     = new URLSearchParams(hashString);
       const idToken    = params.get('id_token');
 
-      console.log('[BrainTube] id_token extracted:', idToken ? idToken.substring(0, 20) + '...' : 'NOT FOUND');
+      console.log('[BrainTube] redirect params:', Array.from(params.keys()), '| id_token:', idToken ? 'present' : 'NOT FOUND');
 
       if (!idToken) {
         const err = params.get('error') ?? 'id_token not found in redirect hash';
-        console.error('[BrainTube] Could not extract id_token. hashString:', hashString);
-        setStatus(`Sign-in failed: ${err}`, true);
+        console.error('[BrainTube] Could not extract id_token. hash params:', Array.from(params.keys()));
+        setStatus(chrome.i18n.getMessage('signInFailedDetail', [String(err)]), true);
         return;
       }
 
-      setStatus('Signing in to BrainTube…');
+      setStatus(chrome.i18n.getMessage('signingInToBrainTube'));
 
       try {
         // Exchange the Google id_token for a Supabase session.
@@ -137,7 +140,7 @@ async function runGoogleAuth() {
         // Write both keys so getHeaders() in config.js always finds the token
         // regardless of which code path reads it.
         await chrome.storage.local.set({ bt_session: session, session: session });
-        console.log('✅ Signed in:', data.user?.email);
+        console.log('✅ Signed in');
 
         // Close this tab. window.close() is unreliable for tabs opened via
         // chrome.tabs.create() — use chrome.tabs.remove() instead.
@@ -156,7 +159,7 @@ async function runGoogleAuth() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[BrainTube] Token exchange failed:', msg);
-        setStatus(`Sign-in failed: ${msg}`, true);
+        setStatus(chrome.i18n.getMessage('signInFailedDetail', [String(msg)]), true);
       }
     }
   );

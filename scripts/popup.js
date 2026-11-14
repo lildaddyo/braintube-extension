@@ -1,8 +1,13 @@
 // BrainTube Extension - Popup Script
 import { signIn, signOut, getSession, getCurrentUser } from './auth.js';
-import { processYouTube, getItem, trackEvent, saveWebPage, saveBookmark } from './api.js';
+import { processYouTube, getItem, trackEvent, saveUrl, checkSubscription, getCredits } from './api.js';
+import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, extractVideoId } from './youtube.js';
-import { CONFIG, getSession as getStorageSession } from './config.js';
+import { CONFIG, getValidSession as getStorageSession } from './config.js';
+import { t, localizePage, uiLanguage } from './i18n.js';
+import { upgradeUrl, planView, shouldNudgeAfterSaves, shortDate, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
+
+localizePage();
 
 // Google OAuth client ID — must match Google Cloud Console + Supabase provider config.
 // Redirect URI: chrome.identity.getRedirectURL() (no suffix).
@@ -15,11 +20,11 @@ const GOOGLE_BTN_INNER = `
     <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
     <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
   </svg>
-  Sign in with Google`;
+  ${t('signInWithGoogle')}`;
 
 const AI_HOSTS = {
-  'claude.ai':   { label: 'Claude.ai Conversation', platform: 'claude' },
-  'chatgpt.com': { label: 'ChatGPT Conversation',   platform: 'chatgpt' },
+  'claude.ai':   { label: t('claudeConversation'), platform: 'claude' },
+  'chatgpt.com': { label: t('chatgptConversation'), platform: 'chatgpt' },
 };
 
 // DOM Elements
@@ -47,6 +52,122 @@ const bookmarkBtn = document.getElementById('bookmark-btn');
 const openLibraryBtn = document.getElementById('open-library-btn');
 
 let currentVideo = null;
+
+// ── Plan, credits and upgrade prompts ─────────────────────────────────────────
+const planBar         = document.getElementById('plan-bar');
+const planBadge       = document.getElementById('plan-badge');
+const creditCount     = document.getElementById('credit-count');
+const creditMeter     = document.getElementById('credit-meter');
+const creditMeterFill = document.getElementById('credit-meter-fill');
+const upgradeBtn      = document.getElementById('upgrade-btn');
+const upgradeCard     = document.getElementById('upgrade-card');
+const upgradeTitle    = document.getElementById('upgrade-title');
+const upgradeBody     = document.getElementById('upgrade-body');
+const upgradeCardBtn  = document.getElementById('upgrade-card-btn');
+const upgradeDismiss  = document.getElementById('upgrade-dismiss-btn');
+
+const PLAN_CACHE_KEY = 'bt_plan_view';
+const SAVE_COUNT_KEY = 'bt_save_count';
+const NUDGE_SHOWN_KEY = 'bt_save_nudge_shown_at';
+const PLAN_LABELS = { free: () => t('planFree'), starter: () => t('planStarter'), pro: () => t('planPro'), pro_plus: () => t('planProPlus') };
+
+let plan = null;            // planView() result, or null until known
+let upgradeTrigger = null;  // what opened the visible upgrade card
+
+function renderPlan(view) {
+  plan = view;
+  if (!view) { planBar.style.display = 'none'; return; }
+  planBar.style.display = 'flex';
+  planBadge.className = `plan-badge${view.kind === 'trial' ? ' trial' : ''}`;
+  planBadge.textContent = view.kind === 'trial' ? t('planTrial') : (PLAN_LABELS[view.plan] || PLAN_LABELS.pro)();
+
+  if (view.balance === null) {
+    creditCount.textContent = '';
+  } else if (view.kind === 'trial' && view.trialEnd) {
+    creditCount.textContent = t('creditsTrialEnds', view.balance, shortDate(view.trialEnd, uiLanguage()));
+  } else {
+    creditCount.textContent = t('creditsLeft', view.balance);
+  }
+  creditCount.classList.toggle('low', view.low);
+
+  const pct = view.balance !== null && view.allowance ? Math.max(0, Math.min(100, (view.balance / view.allowance) * 100)) : 0;
+  creditMeterFill.style.width = `${pct}%`;
+  creditMeterFill.classList.toggle('low', view.low);
+  creditMeter.style.display = view.balance === null ? 'none' : 'block';
+
+  if (view.kind === 'paid') {
+    upgradeBtn.style.display = 'none';
+  } else {
+    upgradeBtn.textContent = view.kind === 'trial' ? t('keepPro') : t('upgrade');
+    upgradeBtn.style.display = 'inline-block';
+  }
+}
+
+// Shows the cached plan at once, then refreshes it from the backend. A failed lookup keeps the cache
+// (or no bar): the popup must never break because billing is slow.
+async function loadPlan() {
+  try {
+    const cached = (await chrome.storage.local.get(PLAN_CACHE_KEY))[PLAN_CACHE_KEY];
+    if (cached) renderPlan(cached);
+  } catch { /* ignore */ }
+  try {
+    const [sub, credits] = await Promise.all([checkSubscription(), getCredits().catch(() => null)]);
+    const view = planView(sub, credits);
+    renderPlan(view);
+    await chrome.storage.local.set({ [PLAN_CACHE_KEY]: view });
+    if (view.kind !== 'paid' && view.balance === 0) showUpgradeCard('limit_hit');
+  } catch (err) {
+    console.warn('[BrainTube] plan lookup failed:', err?.message);
+  }
+}
+
+function openUpgrade(trigger) {
+  trackEvent('extension_upgrade_clicked', { trigger, plan: plan?.plan ?? null, kind: plan?.kind ?? null });
+  chrome.tabs.create({ url: upgradeUrl({ trigger, surface: 'popup' }) });
+}
+
+function showUpgradeCard(trigger, { saveCount = 0 } = {}) {
+  if (plan?.kind === 'paid') return;
+  upgradeTrigger = trigger;
+  const trial = plan?.kind === 'trial';
+  if (trigger === 'limit_hit') {
+    upgradeTitle.textContent = t('limitTitle');
+    upgradeBody.textContent = trial ? t('limitBodyTrial') : t('limitBody', PLAN_CREDITS.starter, PLAN_CREDITS.pro.toLocaleString('en-US'));
+  } else {
+    upgradeTitle.textContent = t('nudgeTitle', saveCount);
+    upgradeBody.textContent = trial ? t('nudgeBodyTrial') : t('nudgeBody', PLAN_CREDITS.pro.toLocaleString('en-US'), PLAN_CREDITS.free);
+  }
+  upgradeCardBtn.textContent = trial ? t('keepPro') : t('seePlans');
+  upgradeCard.style.display = 'block';
+  trackEvent('extension_upgrade_prompt_shown', { trigger, plan: plan?.plan ?? null, kind: plan?.kind ?? null, save_count: saveCount || null });
+}
+
+// Counts a successful new save and shows the save prompt at the thresholds in upgrade.js.
+async function countSave() {
+  try {
+    const got = await chrome.storage.local.get([SAVE_COUNT_KEY, NUDGE_SHOWN_KEY]);
+    const count = (Number(got[SAVE_COUNT_KEY]) || 0) + 1;
+    await chrome.storage.local.set({ [SAVE_COUNT_KEY]: count });
+    if (plan && shouldNudgeAfterSaves(count, Number(got[NUDGE_SHOWN_KEY]) || 0, plan.kind)) {
+      await chrome.storage.local.set({ [NUDGE_SHOWN_KEY]: count });
+      showUpgradeCard('save_nudge', { saveCount: count });
+    }
+  } catch { /* storage unavailable: no prompt */ }
+}
+
+// A save error: credits gone → upgrade card; rate limit → toast. Returns true when handled.
+function handleLimitError(err) {
+  if (err?.code === ERR_NO_CREDITS) {
+    if (plan) renderPlan({ ...plan, balance: 0, low: true });
+    showUpgradeCard('limit_hit');
+    return true;
+  }
+  if (err?.code === ERR_RATE_LIMITED) {
+    showToast(t('rateLimited'), true, 4000);
+    return true;
+  }
+  return false;
+}
 
 // ── Toast / error helpers ──────────────────────────────────────────────────────
 const toastEl     = document.getElementById('toast');
@@ -102,8 +223,9 @@ async function showMainSection(session) {
   setTimeout(() => { openLibraryBtn.disabled = false; }, 800);
 
   const user = await getCurrentUser();
-  userEmail.textContent = user?.email || 'User';
+  userEmail.textContent = user?.email || t('userFallback');
 
+  loadPlan();
   await trackEvent('extension_opened');
 }
 
@@ -151,10 +273,10 @@ async function loadCurrentVideo() {
       
       // Show status
       const statusMap = {
-        [CONFIG.STATUS.PROCESSING]: '🟡 Processing...',
-        [CONFIG.STATUS.NEEDS_SUMMARY]: '🟡 Needs Summary',
-        [CONFIG.STATUS.INDEXED]: '🟢 Ready',
-        [CONFIG.STATUS.ERROR]: '🔴 Error'
+        [CONFIG.STATUS.PROCESSING]: t('statusProcessingDots'),
+        [CONFIG.STATUS.NEEDS_SUMMARY]: t('statusNeedsSummary'),
+        [CONFIG.STATUS.INDEXED]: t('statusReady'),
+        [CONFIG.STATUS.ERROR]: t('statusError')
       };
       videoStatus.textContent = statusMap[item.status] || item.status;
       videoStatus.className = `video-status status-${item.status}`;
@@ -177,8 +299,8 @@ async function handleSaveConversation(tabId, platform) {
   const status = document.getElementById('ai-save-status');
 
   btn.disabled       = true;
-  btn.textContent    = '⏳ Saving…';
-  status.textContent = 'Summarising on BrainTube server…';
+  btn.textContent    = t('savingEllipsis');
+  status.textContent = t('summarisingOnServer');
 
   try {
     const resp = await chrome.runtime.sendMessage({
@@ -188,37 +310,38 @@ async function handleSaveConversation(tabId, platform) {
     });
 
     if (resp?.ok) {
-      btn.textContent = '✅ Saved!';
+      btn.textContent = t('savedBang');
+      countSave();
       if (resp.fallback) {
         // Content script couldn't extract text — URL + title saved as reference.
         status.textContent = resp.title
-          ? `"${resp.title}" saved (reload the page and try again to capture full text)`
-          : 'URL saved to BrainTube';
+          ? t('convSavedNoText', resp.title)
+          : t('urlSavedToBrainTube');
       } else {
-        status.textContent = resp.title ? `"${resp.title}"` : 'Conversation saved to BrainTube';
+        status.textContent = resp.title ? `"${resp.title}"` : t('convSaved');
       }
     } else {
       const msg = resp?.error ?? '';
       if (msg === 'NOT_LOGGED_IN') {
-        status.textContent = 'Sign in to BrainTube first ↑';
+        status.textContent = t('signInFirstArrow');
       } else if (msg === 'SESSION_EXPIRED') {
-        status.textContent = 'Session expired — sign out and back in';
+        status.textContent = t('sessionExpired');
       } else {
         // Never surface raw Chrome internal error strings (e.g. "Could not
         // establish connection. Receiving end does not exist."). Show a
         // generic retry prompt instead.
-        status.textContent = 'Save failed — please try again';
+        status.textContent = t('saveFailedRetry');
       }
       btn.disabled    = false;
-      btn.textContent = '💾 Save Conversation';
+      btn.textContent = t('saveConversation');
     }
   } catch (err) {
     // chrome.runtime.sendMessage can throw when the service worker is not yet
     // active. Hide the raw technical message from the user.
     console.error('[BrainTube] handleSaveConversation error:', err);
-    status.textContent = 'Save failed — please try again';
+    status.textContent = t('saveFailedRetry');
     btn.disabled    = false;
-    btn.textContent = '💾 Save Conversation';
+    btn.textContent = t('saveConversation');
   }
 }
 
@@ -228,22 +351,22 @@ async function handleSignIn() {
   const password = passwordInput.value.trim();
   
   if (!email || !password) {
-    showAuthError('Please enter email and password');
+    showAuthError(t('enterEmailPassword'));
     return;
   }
   showAuthError('');
 
   signinBtn.disabled = true;
-  signinBtn.textContent = 'Signing in...';
+  signinBtn.textContent = t('signingIn');
 
   try {
     const session = await signIn(email, password);
     await showMainSection(session);
     await loadCurrentVideo();
   } catch (error) {
-    showAuthError(error.message || 'Sign in failed');
+    showAuthError(error.message || t('signInFailed'));
     signinBtn.disabled = false;
-    signinBtn.textContent = 'Sign In';
+    signinBtn.textContent = t('signIn');
   }
 }
 
@@ -254,7 +377,7 @@ async function handleSignIn() {
 async function handleGoogleSignIn() {
   showAuthError('');
   googleSigninBtn.disabled = true;
-  googleSigninBtn.textContent = '⏳ Opening Google sign-in…';
+  googleSigninBtn.textContent = t('openingGoogle');
 
   try {
     // chrome.identity.getRedirectURL() returns the canonical chromiumapp.org
@@ -307,11 +430,11 @@ async function handleGoogleSignIn() {
 
     if (!idToken) {
       const err = params.get('error') ?? 'id_token not found in redirect hash';
-      console.error('[BrainTube] Could not extract id_token. hash:', hashString);
+      console.error('[BrainTube] Could not extract id_token. hash params:', Array.from(params.keys()));
       throw new Error(err);
     }
 
-    googleSigninBtn.textContent = '⏳ Verifying…';
+    googleSigninBtn.textContent = t('verifying');
 
     // Exchange id_token for a Supabase session — pure fetch, no browser redirect.
     const res = await fetch(
@@ -348,7 +471,7 @@ async function handleGoogleSignIn() {
 
     // Write both keys so getHeaders() in config.js always finds the token.
     await chrome.storage.local.set({ bt_session: session, session: session });
-    console.log('✅ Google sign-in complete:', data.user?.email);
+    console.log('✅ Google sign-in complete');
 
     // Update popup UI inline — no tab switch, no storage.onChanged needed.
     await showMainSection(session);
@@ -358,7 +481,7 @@ async function handleGoogleSignIn() {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[BrainTube] Google sign-in failed:', msg);
     showAuthError(
-      msg.toLowerCase().includes('cancel') ? 'Sign-in was cancelled' : `Sign-in failed: ${msg}`
+      msg.toLowerCase().includes('cancel') ? t('signInCancelled') : t('signInFailedDetail', msg)
     );
   } finally {
     googleSigninBtn.disabled = false;
@@ -373,72 +496,67 @@ async function handleSaveVideo() {
   // Pre-flight session check — surface 401 cause immediately
   const session = await getStorageSession();
   if (!session?.access_token) {
-    showToast('Not signed in — please sign in first', true);
+    showToast(t('notSignedIn'), true);
     return;
   }
 
   saveVideoBtn.disabled = true;
-  saveVideoBtn.textContent = '💾 Saving...';
+  saveVideoBtn.textContent = t('savingDots');
   
   try {
-    await processYouTube(currentVideo.url, currentVideo.videoId);
+    await processYouTube(currentVideo.url, currentVideo.videoId, currentVideo.isYouTubeMusic ? { isYouTubeMusic: true } : {});
     await trackEvent('extension_video_saved', {
       video_id: currentVideo.videoId,
       source: 'chrome_extension'
     });
 
     saveVideoBtn.textContent = '✅ Saved!';
-    showToast('Video saved! Processing started.');
+    showToast(t('videoSaved'));
+    countSave();
     await loadCurrentVideo();
   } catch (error) {
-    showToast(error.message || 'Failed to save video', true);
+    if (!handleLimitError(error)) showToast(error.message || t('failedSaveVideo'), true);
     saveVideoBtn.disabled = false;
-    saveVideoBtn.textContent = '💾 Save This Video';
+    saveVideoBtn.textContent = t('saveThisVideo');
   }
 }
 
-// Handle Save URL — saves the current tab as a generic web item (any page)
-async function handleSaveUrl() {
+// Save URL / Bookmark — any page. The backend reads it (text, summary, search segments); the tab's own
+// text goes along as a fallback for pages the server cannot read.
+async function saveCurrentTab(btn, { bookmark, idleLabel, busyLabel, doneLabel }) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+  if (!tab?.url) { showToast(t('cannotReadTab'), true); return; }
 
-  saveUrlBtn.disabled = true;
-  saveUrlBtn.textContent = '⏳ Saving…';
+  btn.disabled = true;
+  btn.textContent = busyLabel;
+  const reset = () => setTimeout(() => { btn.textContent = idleLabel; btn.disabled = false; }, 2500);
 
   try {
-    const user = await getCurrentUser();
-    if (!user?.id) throw new Error('Not signed in');
-    await saveWebPage(user.id, tab.title, tab.url);
-    saveUrlBtn.textContent = '✓ Saved!';
-    showToast('Page saved to your library!');
-    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+    const session = await getStorageSession();
+    if (!session?.access_token) throw new Error(t('notSignedIn'));
+    const page = await readTabPage(tab.id);
+    const res = await saveUrl(tab.url, { bookmark, page });
+    btn.textContent = res.duplicate ? t('alreadySavedBtn') : doneLabel;
+    showToast(res.duplicate
+      ? t('alreadyInLibrary')
+      : res.slow ? t('serverSlow')
+      : bookmark ? t('bookmarkedToast') : t('savedSummarySoon'));
+    trackEvent(bookmark ? 'extension_bookmark_saved' : 'extension_page_saved', { source_type: res.sourceType, duplicate: res.duplicate, page_text: !!page?.text });
+    if (!res.duplicate) countSave();
+    reset();
   } catch (err) {
-    showToast(err.message || 'Save failed', true);
-    saveUrlBtn.textContent = '❌ Error';
-    setTimeout(() => { saveUrlBtn.textContent = '➕ Save URL'; saveUrlBtn.disabled = false; }, 2500);
+    if (!handleLimitError(err)) showToast(err.message || t('saveFailed'), true);
+    btn.textContent = t('errorBtn');
+    reset();
   }
 }
 
-// Handle Bookmark — saves the current tab as a bookmark (any page)
-async function handleBookmark() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) { showToast('Could not read current tab URL', true); return; }
+function handleSaveUrl() {
+  return saveCurrentTab(saveUrlBtn, { bookmark: false, idleLabel: t('saveUrl'), busyLabel: t('savingEllipsis'), doneLabel: t('savedCheck') });
+}
 
-  bookmarkBtn.disabled = true;
-  bookmarkBtn.textContent = '⏳ Saving…';
-
-  try {
-    const user = await getCurrentUser();
-    if (!user?.id) throw new Error('Not signed in');
-    await saveBookmark(user.id, tab.title, tab.url);
-    bookmarkBtn.textContent = '✓ Bookmarked!';
-    showToast('Bookmarked! Find it in the 🔖 Saved tab.');
-    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
-  } catch (err) {
-    showToast(err.message || 'Bookmark failed', true);
-    bookmarkBtn.textContent = '❌ Error';
-    setTimeout(() => { bookmarkBtn.textContent = '🔖 Bookmark'; bookmarkBtn.disabled = false; }, 2500);
-  }
+function handleBookmark() {
+  return saveCurrentTab(bookmarkBtn, { bookmark: true, idleLabel: t('bookmark'), busyLabel: t('savingEllipsis'), doneLabel: t('bookmarkedCheck') });
 }
 
 // Event Listeners
@@ -460,7 +578,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+upgradeBtn.addEventListener('click', () => openUpgrade(plan?.kind === 'trial' ? 'trial_badge' : 'popup_badge'));
+upgradeCardBtn.addEventListener('click', () => openUpgrade(upgradeTrigger || 'limit_hit'));
+upgradeDismiss.addEventListener('click', () => {
+  trackEvent('extension_upgrade_dismissed', { trigger: upgradeTrigger });
+  upgradeCard.style.display = 'none';
+});
+
 signoutBtn.addEventListener('click', async () => {
+  try { await chrome.storage.local.remove(PLAN_CACHE_KEY); } catch { /* ignore */ }
+  renderPlan(null);
+  upgradeCard.style.display = 'none';
   await signOut();
   showAuthSection();
 });
@@ -495,15 +623,11 @@ openLibraryBtn.addEventListener('click', async (e) => {
   }
   console.log('[BrainTube] openLibraryBtn: user clicked — opening library tab');
 
-  // Read session from storage and append tokens to the URL hash so the web
-  // app can call supabase.auth.setSession() and log the user in automatically.
-  const all = await chrome.storage.local.get(['bt_session', 'session']);
-  const session = all.bt_session || all.session;
-  let url = `${CONFIG.WEB_APP_URL}/library`;
-  if (session?.access_token && session?.refresh_token) {
-    url += `#access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}&token_type=bearer`;
-  }
-  chrome.tabs.create({ url });
+  // Never put session tokens in the URL: a URL (fragment included) is kept in
+  // browser history, history sync and the omnibox, so a refresh token there
+  // can be replayed to take over the account. The web app signs the user in
+  // with its own session.
+  chrome.tabs.create({ url: `${CONFIG.WEB_APP_URL}/library` });
 });
 
 searchInput.addEventListener('keypress', (e) => {

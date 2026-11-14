@@ -1,0 +1,24 @@
+{
+  "name": "braintube-extension",
+  "version": "1.0.0",
+  "description": "**Built from official specification** - Production-ready Chrome extension for BrainTube.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node scripts/routing.test.mjs && node scripts/session.test.mjs && node scripts/locales.test.mjs && node scripts/content-language.test.mjs && node scripts/function-region.test.mjs && node scripts/x-parse.test.mjs && node scripts/upgrade.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lildaddyo/braintube-extension.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lildaddyo/braintube-extension/issues"
+  },
+  "homepage": "https://github.com/lildaddyo/braintube-extension#readme",
+  "devDependencies": {
+    "sharp": "^0.35.5"
+  }
+}

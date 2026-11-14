@@ -1,9 +1,14 @@
 // BrainTube Extension - Side Panel
 import { getSession, getCurrentUser } from './auth.js';
-import { getItem, getTranscriptSegments, getHighlights, generateSummary, chat, trackEvent,
-         getBookmarks, saveBookmark, patchItem } from './api.js';
+import { getItem, getTranscriptSegments, getHighlights, generateSummary, chatItem, chatCorpus, trackEvent,
+         getBookmarks, saveUrl, patchItem } from './api.js';
+import { readTabPage } from './page-capture.js';
 import { getCurrentVideoInfo, seekToTime, formatTime } from './youtube.js';
 import { CONFIG } from './config.js';
+import { t, localizePage, uiLanguage } from './i18n.js';
+import { upgradeUrl, ERR_NO_CREDITS, ERR_RATE_LIMITED, PLAN_CREDITS } from './upgrade.js';
+
+localizePage();
 
 // DOM Elements
 const loading = document.getElementById('loading');
@@ -30,7 +35,7 @@ async function init() {
   try {
     const session = await getSession();
     if (!session) {
-      showEmpty('Please sign in to use BrainTube');
+      showEmpty(t('pleaseSignIn'));
       return;
     }
     
@@ -38,7 +43,7 @@ async function init() {
     const videoInfo = await getCurrentVideoInfo(tab);
     
     if (!videoInfo) {
-      showEmpty('Open a YouTube video to use this feature');
+      showEmpty(t('openYouTubeVideo'));
       return;
     }
     
@@ -51,12 +56,12 @@ async function init() {
       return;
     }
     
-    videoTitleEl.textContent = currentItem.title || 'YouTube Video';
+    videoTitleEl.textContent = currentItem.title || t('youtubeVideo');
     await loadAllContent();
     
   } catch (error) {
     console.error('Init error:', error);
-    showEmpty('Failed to load video data');
+    showEmpty(t('failedLoadVideo'));
   } finally {
     loading.style.display = 'none';
   }
@@ -85,27 +90,27 @@ async function loadSummary() {
   
   // Status badge
   const statusClass = currentItem.status === CONFIG.STATUS.INDEXED ? 'indexed' : 'processing';
-  const statusText = currentItem.status === CONFIG.STATUS.INDEXED ? '🟢 Ready' : '🟡 Processing';
+  const statusText = currentItem.status === CONFIG.STATUS.INDEXED ? t('statusReady') : t('statusProcessing');
   html += `<div class="status-badge ${statusClass}">${statusText}</div>`;
   
   // Generate summary button if needed
   if (currentItem.status !== CONFIG.STATUS.INDEXED) {
-    html += `<button class="btn-primary" id="generate-btn">🤖 Generate AI Summary</button>`;
+    html += `<button class="btn-primary" id="generate-btn">${t('generateSummary')}</button>`;
   }
   
   // Summary
   if (currentItem.summary) {
     html += `<div class="card">
-      <h3>Summary</h3>
-      <p>${currentItem.summary}</p>
+      <h3>${t('summaryHeading')}</h3>
+      <p>${escHtml(currentItem.summary)}</p>
     </div>`;
   }
   
   // Key Takeaways
   if (currentItem.key_takeaways?.length > 0) {
     html += `<div class="card">
-      <h3>Key Takeaways</h3>
-      <ul>${currentItem.key_takeaways.map(t => `<li>${t}</li>`).join('')}</ul>
+      <h3>${t('keyTakeaways')}</h3>
+      <ul>${currentItem.key_takeaways.map(t => `<li>${escHtml(t)}</li>`).join('')}</ul>
     </div>`;
   }
   
@@ -116,15 +121,15 @@ async function loadSummary() {
   if (generateBtn) {
     generateBtn.addEventListener('click', async () => {
       generateBtn.disabled = true;
-      generateBtn.textContent = '⏳ Processing...';
+      generateBtn.textContent = t('processingBtn');
       
       try {
         await generateSummary(currentItem.id);
-        generateBtn.textContent = '✅ Started! Refresh in a minute';
+        generateBtn.textContent = t('startedRefresh');
       } catch (error) {
         console.error('Failed to generate summary:', error);
         generateBtn.disabled = false;
-        generateBtn.textContent = '❌ Failed — try again';
+        generateBtn.textContent = t('failedTryAgain');
       }
     });
   }
@@ -135,16 +140,16 @@ async function loadTranscript() {
   const segments = await getTranscriptSegments(currentItem.id);
   
   if (segments.length === 0) {
-    transcriptContent.innerHTML = '<div class="empty"><p>No transcript available</p></div>';
+    transcriptContent.innerHTML = `<div class="empty"><p>${t('noTranscript')}</p></div>`;
     return;
   }
   
   let html = '';
   segments.forEach(seg => {
     html += `
-      <div class="transcript-segment" data-time="${seg.start_time_sec}">
+      <div class="transcript-segment" data-time="${Number(seg.start_time_sec) || 0}">
         <div class="segment-time">${formatTime(seg.start_time_sec)}</div>
-        <div class="segment-text">${seg.text}</div>
+        <div class="segment-text">${escHtml(seg.text)}</div>
       </div>
     `;
   });
@@ -165,7 +170,7 @@ async function loadHighlights() {
   const highlights = await getHighlights(currentItem.id);
   
   if (highlights.length === 0) {
-    highlightsContent.innerHTML = '<div class="empty"><p>No highlights yet</p></div>';
+    highlightsContent.innerHTML = `<div class="empty"><p>${t('noHighlights')}</p></div>`;
     return;
   }
   
@@ -173,8 +178,8 @@ async function loadHighlights() {
   highlights.forEach(h => {
     html += `
       <div class="highlight-card">
-        <div class="highlight-text">${h.text}</div>
-        ${h.note ? `<div class="highlight-note">${h.note}</div>` : ''}
+        <div class="highlight-text">${escHtml(h.text)}</div>
+        ${h.note ? `<div class="highlight-note">${escHtml(h.note)}</div>` : ''}
       </div>
     `;
   });
@@ -185,13 +190,65 @@ async function loadHighlights() {
 // Conversation history for multi-turn context
 let conversationHistory = [];
 
-// Initialize chat
-function initChat() {
-  conversationHistory = [];
-  addMessage('assistant', '👋 Hi! Ask me anything about this video!');
+// ── Chat mode toggle (item vs corpus) ────────────────────────────────────────
 
-  if (currentItem.status !== CONFIG.STATUS.INDEXED) {
-    addMessage('assistant', '⚠️ Note: This video is still processing. Chat will work once it\'s indexed.');
+const CHAT_MODE_KEY = 'bt_chat_mode';
+
+async function getChatMode() {
+  try {
+    const s = await chrome.storage.session.get(CHAT_MODE_KEY);
+    return s[CHAT_MODE_KEY] || 'item';
+  } catch {
+    return 'item';
+  }
+}
+
+async function setChatMode(mode) {
+  try { await chrome.storage.session.set({ [CHAT_MODE_KEY]: mode }); } catch { /* ignore */ }
+}
+
+function applyToggleUI(mode) {
+  document.querySelectorAll('.chat-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  chatInput.placeholder = mode === 'item'
+    ? t('askVideoPlaceholder')
+    : t('askCorpusPlaceholder');
+}
+
+document.querySelectorAll('.chat-mode-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const mode = btn.dataset.mode;
+    await setChatMode(mode);
+    applyToggleUI(mode);
+    conversationHistory = []; // new mode = fresh context
+    chatMessages.innerHTML = '';
+    const greeting = mode === 'item'
+      ? t('greetItem')
+      : t('greetCorpus');
+    addMessage('assistant', greeting);
+  });
+});
+
+// Initialize chat
+async function initChat() {
+  conversationHistory = [];
+
+  // Default: item mode when a video is loaded, corpus when no item
+  const defaultMode = currentItem ? 'item' : 'corpus';
+  const storedMode  = await getChatMode();
+  const mode        = currentItem ? storedMode : 'corpus';
+
+  await setChatMode(mode);
+  applyToggleUI(mode);
+
+  const greeting = mode === 'item'
+    ? t('greetItem')
+    : t('greetCorpus');
+  addMessage('assistant', greeting);
+
+  if (currentItem && currentItem.status !== CONFIG.STATUS.INDEXED) {
+    addMessage('assistant', t('stillProcessingNote'));
   }
 }
 
@@ -200,35 +257,39 @@ async function sendChat() {
   const message = chatInput.value.trim();
   if (!message) return;
 
-  if (currentItem.status !== CONFIG.STATUS.INDEXED) {
-    addMessage('assistant', '⏳ This video is still processing. Please wait until it\'s indexed before chatting.');
+  const mode = await getChatMode();
+
+  if (mode === 'item' && currentItem && currentItem.status !== CONFIG.STATUS.INDEXED) {
+    addMessage('assistant', t('stillProcessingWait'));
     return;
   }
 
-  // Append user turn to history and UI
   conversationHistory.push({ role: 'user', content: message });
   addMessage('user', message);
   chatInput.value = '';
 
   const loadingId = 'msg-' + Date.now();
-  addMessage('assistant', '💭 Thinking...', loadingId);
+  addMessage('assistant', t('thinking'), loadingId);
   chatSend.disabled = true;
 
   try {
-    // Send full history so the edge function has multi-turn context
-    const reply = await chat(conversationHistory, currentItem.id);
+    let reply;
+    if (mode === 'item' && currentItem) {
+      reply = await chatItem(conversationHistory, currentItem.id);
+    } else {
+      reply = await chatCorpus(conversationHistory);
+    }
 
     document.getElementById(loadingId)?.remove();
     addMessage('assistant', reply);
-
-    // Append assistant turn so next send includes it
     conversationHistory.push({ role: 'assistant', content: reply });
 
-    await trackEvent('extension_chat_message', { item_id: currentItem.id });
+    await trackEvent('extension_chat_message', { item_id: currentItem?.id, mode });
   } catch (error) {
     document.getElementById(loadingId)?.remove();
-    addMessage('assistant', '❌ Failed to get response: ' + error.message);
-    // Remove the failed user turn from history so it can be retried
+    if (error?.code === ERR_NO_CREDITS) addLimitMessage(mode);
+    else if (error?.code === ERR_RATE_LIMITED) addMessage('assistant', t('chatRateLimited'));
+    else addMessage('assistant', '❌ ' + error.message);
     conversationHistory.pop();
   } finally {
     chatSend.disabled = false;
@@ -242,7 +303,9 @@ function renderMarkdown(raw) {
   const esc = s => s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
   // 2. Apply inline styles (bold, italic, code) to an already-escaped line.
   const inline = s => s
@@ -295,6 +358,27 @@ function addMessage(role, text, id) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Out of AI credits in chat: say so plainly and offer the plans page (utm_source=extension).
+function addLimitMessage(mode) {
+  const msgEl = document.createElement('div');
+  msgEl.className = 'message assistant limit-message';
+  const title = document.createElement('strong');
+  title.textContent = t('limitTitle');
+  const body = document.createElement('p');
+  body.textContent = t('limitBody', PLAN_CREDITS.starter, PLAN_CREDITS.pro.toLocaleString('en-US'));
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary btn-upgrade-chat';
+  btn.textContent = t('seePlans');
+  btn.addEventListener('click', () => {
+    trackEvent('extension_upgrade_clicked', { trigger: 'limit_hit', surface: 'sidepanel', mode });
+    chrome.tabs.create({ url: upgradeUrl({ trigger: 'limit_hit', surface: 'sidepanel' }) });
+  });
+  msgEl.append(title, body, btn);
+  chatMessages.appendChild(msgEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  trackEvent('extension_upgrade_prompt_shown', { trigger: 'limit_hit', surface: 'sidepanel', mode });
+}
+
 // Tab switching
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -325,13 +409,13 @@ function bmTimeAgo(isoDate) {
   if (!isoDate) return '';
   const ms = Date.now() - new Date(isoDate).getTime();
   const mins = Math.floor(ms / 60000);
-  if (mins < 2)  return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 2)  return t('justNow');
+  if (mins < 60) return t('minutesAgo', mins);
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)  return `${hrs}h ago`;
+  if (hrs < 24)  return t('hoursAgo', hrs);
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(isoDate).toLocaleDateString();
+  if (days < 30) return t('daysAgo', days);
+  return new Date(isoDate).toLocaleDateString(uiLanguage());
 }
 
 function bmDomain(url) {
@@ -348,13 +432,13 @@ async function loadBookmarks(filter) {
   currentBookmarkFilter = filter;
   const list = document.getElementById('bookmarks-list');
   if (!list) return;
-  list.innerHTML = '<div class="bookmarks-empty">Loading…</div>';
+  list.innerHTML = `<div class="bookmarks-empty">${t('loadingEllipsis')}</div>`;
   try {
     const items = await getBookmarks(currentUser.id, filter);
     renderBookmarks(items);
   } catch (err) {
     console.error('loadBookmarks error:', err);
-    list.innerHTML = '<div class="bookmarks-empty">Failed to load bookmarks.</div>';
+    list.innerHTML = `<div class="bookmarks-empty">${t('failedLoadBookmarks')}</div>`;
   }
 }
 
@@ -362,8 +446,8 @@ function renderBookmarks(items) {
   const list = document.getElementById('bookmarks-list');
   if (!list) return;
   if (!items.length) {
-    const labels = { unread: 'unread bookmarks', read: 'read bookmarks', all: 'bookmarks' };
-    list.innerHTML = `<div class="bookmarks-empty">No ${labels[currentBookmarkFilter] || 'bookmarks'} yet.<br>Save pages for later using the button above.</div>`;
+    const empty = { unread: t('emptyUnread'), read: t('emptyRead'), all: t('emptyAll') };
+    list.innerHTML = `<div class="bookmarks-empty">${empty[currentBookmarkFilter] || empty.all}<br>${t('saveForLaterHint')}</div>`;
     return;
   }
   list.innerHTML = '';
@@ -385,12 +469,13 @@ function renderBookmarks(items) {
         ${when ? `<div class="bookmark-time">${when}</div>` : ''}
       </div>
       <div class="bookmark-actions">
-        <button class="bm-action-btn bm-read-btn" title="${b.is_read?'Mark unread':'Mark as read'}">${b.is_read?'↩':'✓'}</button>
-        <button class="bm-action-btn bm-remove-btn" title="Remove bookmark">×</button>
+        <button class="bm-action-btn bm-read-btn" title="${b.is_read ? t('markUnread') : t('markRead')}">${b.is_read?'↩':'✓'}</button>
+        <button class="bm-action-btn bm-remove-btn" title="${t('removeBookmark')}">×</button>
       </div>`;
 
     el.querySelector('.bookmark-title').addEventListener('click', () => {
-      if (b.source_url) chrome.tabs.create({ url: b.source_url });
+      // Only open web URLs; a stored javascript:, data: or chrome: URL is ignored.
+      if (b.source_url && /^https?:\/\//i.test(b.source_url)) chrome.tabs.create({ url: b.source_url });
     });
 
     el.querySelector('.bm-read-btn').addEventListener('click', async e => {
@@ -402,7 +487,7 @@ function renderBookmarks(items) {
         await patchItem(b.id, { is_read: newRead });
         b.is_read = newRead;
         btn.textContent = newRead ? '↩' : '✓';
-        btn.title = newRead ? 'Mark unread' : 'Mark as read';
+        btn.title = newRead ? t('markUnread') : t('markRead');
         el.classList.toggle('bm-item-read', newRead);
         if (currentBookmarkFilter !== 'all') {
           el.style.transition = 'opacity 0.2s';
@@ -436,26 +521,26 @@ function bmCheckEmpty() {
 
 async function bmSaveCurrentPage() {
   const btn = document.getElementById('bookmark-this-page');
-  if (!currentUser) { btn.textContent = '⚠️ Sign in first'; return; }
+  if (!currentUser) { btn.textContent = t('signInFirstWarn'); return; }
   btn.disabled = true;
-  btn.textContent = '⏳ Saving…';
+  btn.textContent = t('savingEllipsis');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const url   = tab?.url || '';
-    const title = tab?.title?.replace(/ [-–|].*$/, '').trim() || url;
     const rawTags = (document.getElementById('bookmark-tags-input')?.value || '');
     const tags = rawTags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-    await saveBookmark(currentUser.id, title, url, tags);
+    const res = await saveUrl(url, { bookmark: true, page: await readTabPage(tab?.id) });
+    if (tags.length > 0 && res.itemId) await patchItem(res.itemId, { tags });
     if (document.getElementById('bookmark-tags-input')) document.getElementById('bookmark-tags-input').value = '';
-    btn.textContent = '✅ Saved!';
-    setTimeout(() => { btn.textContent = '🔖 Bookmark this page'; btn.disabled = false; }, 1800);
+    btn.textContent = t('savedBang');
+    setTimeout(() => { btn.textContent = t('bookmarkThisPage'); btn.disabled = false; }, 1800);
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
     const unreadPill = document.querySelector('.filter-pill[data-filter="unread"]');
     if (unreadPill) unreadPill.classList.add('active');
     loadBookmarks('unread');
   } catch (err) {
     console.error('saveBookmark error:', err);
-    btn.textContent = '❌ Failed — try again';
+    btn.textContent = t('failedTryAgain');
     btn.disabled = false;
   }
 }

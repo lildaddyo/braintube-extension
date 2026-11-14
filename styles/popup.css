@@ -9,7 +9,7 @@
 body {
   width: 380px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #866CEF;
   color: #fff;
 }
 
@@ -69,7 +69,7 @@ input[type="password"],
 
 .btn-primary {
   background: #fff;
-  color: #667eea;
+  color: #866CEF;
 }
 
 .btn-secondary, .btn-action {
@@ -129,3 +129,101 @@ input[type="password"],
   gap: 8px;
   margin-top: 12px;
 }
+
+/* Account row */
+.user-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+#user-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Plan + credits bar */
+.plan-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  margin-bottom: 10px;
+}
+
+.plan-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.plan-badge {
+  background: #fff;
+  color: #5b45c9;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.plan-badge.trial { background: #fde68a; color: #78350f; }
+
+.credit-count { opacity: 0.92; }
+.credit-count.low { color: #fde68a; font-weight: 600; }
+
+.btn-upgrade {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #5b45c9;
+}
+
+.btn-upgrade:hover { background: #f3f0ff; }
+
+.credit-meter {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  overflow: hidden;
+}
+
+.credit-meter-fill {
+  height: 100%;
+  width: 0;
+  background: #fff;
+  transition: width 0.3s ease;
+}
+
+.credit-meter-fill.low { background: #fde68a; }
+
+.upgrade-card {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.45);
+  margin: 10px 0;
+}
+
+.upgrade-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.upgrade-body { font-size: 13px; line-height: 1.45; opacity: 0.95; }
+
+/* Korean: wrap between words, never inside one */
+:lang(ko) body { word-break: keep-all; }
