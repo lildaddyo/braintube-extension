@@ -186,6 +186,12 @@
   "bookmarkedCheck": {
     "message": "✓ Bookmarked!"
   },
+  "aiCaptureDisclosure": {
+    "message": "Only when you click Save, BrainTube reads this conversation from the page and sends its text to the BrainTube server, where Anthropic (Claude) summarises it."
+  },
+  "playlistSyncDisclosure": {
+    "message": "While you are signed in, adding a video to one of your YouTube playlists also imports that playlist into your BrainTube library."
+  },
   "sidePanelTitle": {
     "message": "BrainTube Side Panel"
   },
@@ -554,5 +560,26 @@
   },
   "chatRateLimited": {
     "message": "Too many questions right now. Try again in a few minutes."
+  },
+  "gateUpdateTitle": {
+    "message": "Please update BrainTube"
+  },
+  "gateUpdateBody": {
+    "message": "This version is no longer supported. Update to keep saving and asking your brain."
+  },
+  "gateUpdateButton": {
+    "message": "Update"
+  },
+  "gatePausedTitle": {
+    "message": "BrainTube is paused"
+  },
+  "gatePausedBody": {
+    "message": "We're fixing something on our side. Please try again in a little while."
+  },
+  "gateAvailable": {
+    "message": "A new version of BrainTube is available."
+  },
+  "gateClose": {
+    "message": "Close"
   }
 }

@@ -186,6 +186,12 @@
   "bookmarkedCheck": {
     "message": "✓ 북마크했어요!"
   },
+  "aiCaptureDisclosure": {
+    "message": "저장을 누를 때만 BrainTube가 이 페이지에서 대화를 읽어요. 대화 내용은 BrainTube 서버로 보내지고, Anthropic(Claude)이 요약해요."
+  },
+  "playlistSyncDisclosure": {
+    "message": "로그인한 동안 YouTube 재생목록에 영상을 추가하면 그 재생목록도 내 BrainTube 라이브러리로 가져와요."
+  },
   "sidePanelTitle": {
     "message": "BrainTube 사이드 패널"
   },
@@ -554,5 +560,26 @@
   },
   "chatRateLimited": {
     "message": "지금은 질문이 너무 많아요. 몇 분 뒤에 다시 시도해 주세요."
+  },
+  "gateUpdateTitle": {
+    "message": "BrainTube를 업데이트해 주세요"
+  },
+  "gateUpdateBody": {
+    "message": "이 버전은 더 이상 지원되지 않아요. 계속 저장하고 질문하려면 업데이트해 주세요."
+  },
+  "gateUpdateButton": {
+    "message": "업데이트"
+  },
+  "gatePausedTitle": {
+    "message": "BrainTube가 잠시 멈췄어요"
+  },
+  "gatePausedBody": {
+    "message": "문제를 고치고 있어요. 잠시 후 다시 시도해 주세요."
+  },
+  "gateAvailable": {
+    "message": "BrainTube 새 버전이 나왔어요."
+  },
+  "gateClose": {
+    "message": "닫기"
   }
 }

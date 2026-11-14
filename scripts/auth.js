@@ -1,5 +1,5 @@
 // BrainTube Extension - Authentication Module
-import { CONFIG, buildUrl, getValidSession } from './config.js';
+import { CONFIG, buildUrl, getValidSession, saveSession as storeSession, clearSession } from './config.js';
 import { t } from './i18n.js';
 
 // Sign in with email/password
@@ -33,14 +33,12 @@ export async function signIn(email, password) {
   }
 }
 
-// Save session to storage — writes both keys so getHeaders() always finds the token
-// regardless of auth method (email/password or Google OAuth)
+// Save the session (one key in chrome.storage.session, see config.js) for either sign-in method.
 export async function saveSession(session) {
-  await chrome.storage.local.set({ session, bt_session: session });
-  console.log('💾 Session saved (both keys)');
+  await storeSession(session);
 }
 
-// Get current session — checks bt_session (Google OAuth) then session (email/password)
+// Get current session, refreshed when its access token is about to expire
 export async function getSession() {
   try {
     return await getValidSession();
@@ -49,9 +47,9 @@ export async function getSession() {
   }
 }
 
-// Sign out — clears both session keys
+// Sign out — clears the session (and any copy an older version left in chrome.storage.local)
 export async function signOut() {
-  await chrome.storage.local.remove(['session', 'bt_session']);
+  await clearSession();
   console.log('👋 Signed out');
 }
 
