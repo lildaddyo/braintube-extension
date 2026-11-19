@@ -464,6 +464,86 @@
   "xImportAgain": {
     "message": "다시 가져오기"
   },
+  "ytListImportWatchLater": {
+    "message": "나중에 볼 동영상 가져오기 (최대 $LIMIT$개)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportLiked": {
+    "message": "좋아요 표시한 동영상 가져오기 (최대 $LIMIT$개)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportIntro": {
+    "message": "이 목록의 모든 영상을 BrainTube에 추가해요. 이미 라이브러리에 있는 영상은 건너뛰어요. 요금제의 가져오기 한도와 크레딧이 적용돼요."
+  },
+  "ytListImportFinding": {
+    "message": "영상을 찾는 중… $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportProgress": {
+    "message": "가져오는 중 $INDEX$/$TOTAL$… ($SAVED$개 추가됨)",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "saved": {
+        "content": "$3"
+      }
+    }
+  },
+  "ytListImportNone": {
+    "message": "이 목록에서 영상을 찾지 못했어요."
+  },
+  "ytListImportDone": {
+    "message": "완료: $ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요.",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      }
+    }
+  },
+  "ytListImportStopped": {
+    "message": "중지됨: $ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요.",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      }
+    }
+  },
+  "ytListImportLimited": {
+    "message": "$ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요. $REASON$",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "reason": {
+        "content": "$3"
+      }
+    }
+  },
   "planFree": {
     "message": "무료"
   },

@@ -464,6 +464,86 @@
   "xImportAgain": {
     "message": "Import again"
   },
+  "ytListImportWatchLater": {
+    "message": "Import Watch Later (up to $LIMIT$)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportLiked": {
+    "message": "Import Liked videos (up to $LIMIT$)",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportIntro": {
+    "message": "Adds every video in this list to BrainTube. Videos already in your library are skipped. Uses your plan's import limit and credits."
+  },
+  "ytListImportFinding": {
+    "message": "Finding videos… $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "ytListImportProgress": {
+    "message": "Importing $INDEX$ of $TOTAL$… ($SAVED$ added)",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "saved": {
+        "content": "$3"
+      }
+    }
+  },
+  "ytListImportNone": {
+    "message": "No videos found in this list."
+  },
+  "ytListImportDone": {
+    "message": "Done: $ADDED$ added, $ALREADY$ already in BrainTube.",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      }
+    }
+  },
+  "ytListImportStopped": {
+    "message": "Stopped: $ADDED$ added, $ALREADY$ already in BrainTube.",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      }
+    }
+  },
+  "ytListImportLimited": {
+    "message": "$ADDED$ added, $ALREADY$ already in BrainTube. $REASON$",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      },
+      "already": {
+        "content": "$2"
+      },
+      "reason": {
+        "content": "$3"
+      }
+    }
+  },
   "planFree": {
     "message": "Free"
   },

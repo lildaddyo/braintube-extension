@@ -156,6 +156,16 @@ M = [
      "중지됨: $SAVED$개 저장, $ALREADY$개는 이미 BrainTube에 있어요, $FAILED$개 실패."),
     ("xImportError", "Import stopped: $ERROR$", "가져오기가 중지됐어요: $ERROR$"),
     ("xImportAgain", "Import again", "다시 가져오기"),
+    ("ytListImportWatchLater", "Import Watch Later (up to $LIMIT$)", "나중에 볼 동영상 가져오기 (최대 $LIMIT$개)"),
+    ("ytListImportLiked", "Import Liked videos (up to $LIMIT$)", "좋아요 표시한 동영상 가져오기 (최대 $LIMIT$개)"),
+    ("ytListImportIntro", "Adds every video in this list to BrainTube. Videos already in your library are skipped. Uses your plan's import limit and credits.",
+     "이 목록의 모든 영상을 BrainTube에 추가해요. 이미 라이브러리에 있는 영상은 건너뛰어요. 요금제의 가져오기 한도와 크레딧이 적용돼요."),
+    ("ytListImportFinding", "Finding videos… $COUNT$", "영상을 찾는 중… $COUNT$"),
+    ("ytListImportProgress", "Importing $INDEX$ of $TOTAL$… ($SAVED$ added)", "가져오는 중 $INDEX$/$TOTAL$… ($SAVED$개 추가됨)"),
+    ("ytListImportNone", "No videos found in this list.", "이 목록에서 영상을 찾지 못했어요."),
+    ("ytListImportDone", "Done: $ADDED$ added, $ALREADY$ already in BrainTube.", "완료: $ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요."),
+    ("ytListImportStopped", "Stopped: $ADDED$ added, $ALREADY$ already in BrainTube.", "중지됨: $ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요."),
+    ("ytListImportLimited", "$ADDED$ added, $ALREADY$ already in BrainTube. $REASON$", "$ADDED$개 추가, $ALREADY$개는 이미 BrainTube에 있어요. $REASON$"),
 
     # plan, credits and upgrade prompts (popup + side panel). Plan names per GLOSSARY: 무료 / 스타터 / 프로.
     ("planFree", "Free", "무료"),

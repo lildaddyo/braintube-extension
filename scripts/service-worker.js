@@ -86,6 +86,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async
   }
 
+  // One-click Watch Later / Liked import: a batch of ids from yt-list-import.js
+  if (message.type === 'YT_LIST_IMPORT') {
+    importYouTubeIds(message.videoIds, message.source)
+      .then((r) => sendResponse({ ok: true, ...r }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
+
   // Playlist-add event — relayed from content-playlist-watcher.js
   if (message.type === 'PLAYLIST_ADD_EVENT') {
     syncPlaylist(message.youtube_playlist_id)
@@ -164,6 +172,25 @@ async function saveAiConversation(tabId, platform) {
 
 const SUPABASE_URL       = 'https://iqjnmmtvhyavgrsxpoao.supabase.co';
 const SYNC_PLAYLIST_URL  = pinFunctionUrl(`${SUPABASE_URL}/functions/v1/youtube-sync-playlist`);
+
+const BULK_IMPORT_URL = pinFunctionUrl(`${SUPABASE_URL}/functions/v1/youtube-bulk-import`);
+
+// youtube-bulk-import dedupes against the library, applies the plan cap and charges credits.
+async function importYouTubeIds(videoIds, source) {
+  const token = (await getValidSession().catch(() => null))?.access_token;
+  if (!token) throw new Error('NOT_LOGGED_IN');
+  const resp = await fetch(BULK_IMPORT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ videoIds, source }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) throw new Error('SESSION_EXPIRED');
+  // 403 bulk_import_limit is a plan answer the panel shows, not a failure.
+  if (!resp.ok && !data.code) throw new Error(data.error || `Import failed ${resp.status}`);
+  if (!resp.ok) return { imported: 0, skipped: 0, code: data.code, message: data.error || data.message };
+  return { imported: data.imported || 0, skipped: data.skipped || 0, code: data.code || null, message: data.message || null };
+}
 
 async function syncPlaylist(youtubePlaylistId) {
   if (!youtubePlaylistId) return;
