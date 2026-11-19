@@ -19,6 +19,7 @@ export const CONFIG = {
     CHECK_SUBSCRIPTION: '/functions/v1/check-subscription',
     CHECK_CREDITS: '/functions/v1/check-credits',
     TRACK: '/functions/v1/track',
+    WHISPER_TRANSCRIBE: '/functions/v1/whisper-transcribe',
     
     // Direct database access
     REST: '/rest/v1',

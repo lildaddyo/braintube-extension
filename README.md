@@ -2,6 +2,18 @@
 
 **Built from official specification** - Production-ready Chrome extension for BrainTube.
 
+## Deployment
+
+Nothing deploys on push or merge. Publishing to the Chrome Web Store is a manual step.
+
+To ship a new version:
+
+1. Bump `manifest.json` "version" in the release PR (the version-check workflow warns when shippable files change without a bump)
+2. Merge to `main`
+3. Actions > "Publish to Chrome Web Store" > Run workflow on `main`, with `confirm` = `publish`
+4. The workflow refuses any other input, any branch other than `main`, and a version that already has a GitHub release; otherwise it uploads the zip, submits it for review and tags the release
+5. Wait ~24h for Google approval
+
 ## ✨ What's Included
 
 ### Core Features
