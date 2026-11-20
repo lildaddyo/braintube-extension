@@ -1,25 +1,8 @@
 // BrainTube Extension - API Module
-import { CONFIG, buildUrl } from './config.js';
-
-// Read token directly from storage — bypasses any config.js import chain issues.
-// Checks bt_session (Google OAuth) then session (email/password), both keys
-// are always written together by auth.js and auth-handler.js.
-async function getHeaders() {
-  chrome.storage.local.get(null, (items) => console.log('[BrainTube] ALL storage keys:', Object.keys(items), JSON.stringify(items).substring(0, 500)));
-  const all = await chrome.storage.local.get(null);
-  const session = all['bt_session'] || all['session'];
-  const token = session?.access_token;
-  console.log('[BrainTube] getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', token ? token.substring(0, 20) + '...' : 'MISSING');
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'apikey': CONFIG.SUPABASE_ANON_KEY,
-  };
-}
+import { CONFIG, buildUrl, getHeaders } from './config.js';
 
 // Save YouTube video
 export async function processYouTube(url, videoId) {
-  chrome.storage.local.get(null, (items) => console.log('[BrainTube] ALL storage keys:', Object.keys(items), JSON.stringify(items).substring(0, 500)));
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 

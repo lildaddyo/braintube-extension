@@ -1,6 +1,6 @@
 // BrainTube Extension - Service Worker
 import { trackEvent, transcribeAudio, processContent, RateLimitError } from './api.js';
-import { CONFIG } from './config.js';
+import { CONFIG, getAccessToken } from './config.js';
 
 console.log('🧠 BrainTube service worker started');
 
@@ -82,8 +82,7 @@ async function withRateLimitWait(fn, tabId) {
 }
 
 async function importInstagramItem(item, tabId) {
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  if (!(stored.bt_session || stored.session)?.access_token) throw new Error('NOT_LOGGED_IN');
+  if (!(await getAccessToken())) throw new Error('NOT_LOGGED_IN');
 
   let transcript = '';
   if (item.audio) {
@@ -144,8 +143,7 @@ async function saveAiConversation(tabId, platform) {
   }
 
   // Get auth token
-  const stored = await chrome.storage.local.get(['session', 'bt_session']);
-  const token  = (stored.bt_session || stored.session)?.access_token;
+  const token  = await getAccessToken();
   if (!token) throw new Error('NOT_LOGGED_IN');
 
   // POST to BrainTube

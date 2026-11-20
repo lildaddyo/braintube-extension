@@ -1,5 +1,5 @@
 // BrainTube Extension - Authentication Module
-import { CONFIG, buildUrl } from './config.js';
+import { CONFIG, buildUrl, getSession as getFreshSession } from './config.js';
 
 // Sign in with email/password
 export async function signIn(email, password) {
@@ -41,8 +41,7 @@ export async function saveSession(session) {
 
 // Get current session — checks bt_session (Google OAuth) then session (email/password)
 export async function getSession() {
-  const result = await chrome.storage.local.get(['session', 'bt_session']);
-  return result.bt_session || result.session || null;
+  return getFreshSession();
 }
 
 // Sign out — clears both session keys

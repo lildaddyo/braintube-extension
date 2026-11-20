@@ -50,22 +50,59 @@ export function buildUrl(endpoint) {
   return `${CONFIG.SUPABASE_URL}${endpoint}`;
 }
 
-// Helper to get auth headers — checks bt_session (Google OAuth) then session (email/password)
+// Session handling. Supabase access tokens live ~1 h; without a refresh every call
+// returns 401 "unauthorized" an hour after sign-in. getSession() refreshes the
+// token when it is expired or about to expire, and stores the new pair under both keys.
+function tokenExpiry(token) {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64)).exp * 1000;
+  } catch {
+    return 0;
+  }
+}
+
+let refreshInFlight = null;
+
+async function refreshSession(session) {
+  const res = await fetch(`${CONFIG.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY },
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
+  });
+  if (!res.ok) {
+    console.warn('[BrainTube] token refresh failed:', res.status);
+    return null;
+  }
+  const data = await res.json();
+  if (!data.access_token) return null;
+  const fresh = { ...session, ...data };
+  await chrome.storage.local.set({ session: fresh, bt_session: fresh });
+  return fresh;
+}
+
+// Current session, refreshed if its access token expires within 60 s.
+export async function getSession() {
+  const stored = await chrome.storage.local.get(['bt_session', 'session']);
+  const session = stored.bt_session || stored.session || null;
+  if (!session?.access_token) return session;
+  if (tokenExpiry(session.access_token) - Date.now() > 60_000) return session;
+  if (!session.refresh_token) return session;
+  // One refresh at a time: Supabase rotates refresh tokens, a parallel second use fails.
+  refreshInFlight ??= refreshSession(session).finally(() => { refreshInFlight = null; });
+  return (await refreshInFlight) || session;
+}
+
+export async function getAccessToken() {
+  return (await getSession())?.access_token || null;
+}
+
+// Auth headers with a fresh token.
 export async function getHeaders() {
-  const all = await chrome.storage.local.get(null);
-  console.log('[BrainTube] config.getHeaders — ALL storage keys:', Object.keys(all));
-  const session = all['bt_session'] || all['session'];
-  const accessToken = session?.access_token;
-  console.log('[BrainTube] config.getHeaders — source:', all['bt_session'] ? 'bt_session' : all['session'] ? 'session' : 'NONE', '| token:', accessToken ? accessToken.substring(0, 20) + '...' : 'MISSING');
+  const accessToken = await getAccessToken();
   return {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
     'apikey': CONFIG.SUPABASE_ANON_KEY
   };
-}
-
-// Helper to get the current session — checks bt_session then session
-export async function getSession() {
-  const stored = await chrome.storage.local.get(['bt_session', 'session']);
-  return stored.bt_session || stored.session || null;
 }
